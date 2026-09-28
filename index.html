@@ -1607,6 +1607,15 @@ select option { background: var(--surface2); color: var(--text); }
   flex-wrap: wrap; gap: 6px; justify-content: center;
   width: 100%; max-width: 360px; margin: 8px 0 12px;
 }
+.voice-kb-zone { width: 100%; max-width: 360px; margin: 8px 0 4px; }
+.voice-kb {
+  width: 100%; box-sizing: border-box; resize: none; font: inherit; font-size: 18px;
+  padding: 10px 12px; border-radius: 12px; border: 1.5px solid var(--warning);
+  background: var(--surface, transparent); color: inherit; font-variant-numeric: tabular-nums;
+}
+.voice-kb:focus { outline: none; border-color: var(--success); }
+.voice-kb-actions { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 11px; color: var(--text3); margin-top: 4px; }
+.voice-kb-clear { font: inherit; font-size: 12px; background: none; border: 1px solid var(--text3); color: var(--text3); border-radius: 8px; padding: 3px 10px; cursor: pointer; }
 .voice-heard { font-size: 12px; color: var(--text3); min-height: 16px; margin-top: 4px; text-align: center; max-width: 340px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .voice-burst-empty { font-size: 12px; color: var(--text3); text-align: center; }
 .voice-burst-chip {
@@ -2030,6 +2039,16 @@ code { background: var(--surface2); }
       <div class="voice-status" id="voice-status">Appuyez sur le micro pour dicter le dossard</div>
 
       <!-- Fil des dossards dictés en rafale (toucher pour annuler / forcer) -->
+      <div class="voice-kb-zone" id="voice-kb-zone" style="display:none;">
+        <textarea id="voice-kb" class="voice-kb" rows="2" inputmode="text" enterkeyhint="done"
+          autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
+          placeholder="Touchez ici, puis 🎤 sur le clavier et dictez : 759… 868… 912…"
+          oninput="voiceKbInput()" onblur="voiceKbBlur()"></textarea>
+        <div class="voice-kb-actions">
+          <span>Chaque dossard dicté est enregistré automatiquement.</span>
+          <button type="button" class="voice-kb-clear" onmousedown="event.preventDefault()" onclick="voiceKbReset(true)">Vider</button>
+        </div>
+      </div>
       <div class="voice-heard" id="voice-heard"></div>
       <div class="voice-burst-log" id="voice-burst-log" style="display:none;">
         <div class="voice-burst-empty">Les dossards dictés s'afficheront ici — touchez-en un pour l'annuler.</div>
@@ -4812,11 +4831,10 @@ let voiceContinuousMode = false;
 
 // ── Dictée en rafale ──────────────────────────────
 const VOICE_BURST = { dedupeMs: 20000, vibrate: true, beep: true };
-let voiceCommitted = {};   // index de résultat -> [{raw, byTimeout, items:[{bib,res,chip}]}]
-let voicePendingTimer = null;
-let voicePendingFlush = null;   // fonction qui valide le numéro en attente
+// Un "canal" = une source de texte dicté : le micro web ou la dictée du clavier
+const voiceCh = { committed: {}, seen: {}, timer: null, flush: null };
+const kbCh    = { committed: {}, seen: {}, timer: null, flush: null };
 const VOICE_STABLE_MS = 700;    // un numéro inchangé pendant 0,7 s est validé sans attendre Chrome
-let voiceFirstSeen = {};   // index de résultat -> [horodatage de 1ère écoute de chaque numéro]
 let voiceLastSeen = new Map(); // "bib|cp" -> ts
 let voiceAudioCtx = null;
 const VOICE_IS_IOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
@@ -4993,9 +5011,9 @@ function showVoiceHeard(txt) {
   if (el) el.textContent = txt ? `Entendu : « ${txt.trim()} »` : '';
 }
 
-// Valide les numéros [from, to) du résultat i
-function voiceCommitRange(i, nums, seen, from, to, byTimeout) {
-  const done = voiceCommitted[i] || (voiceCommitted[i] = []);
+// Valide les numéros [from, to) du résultat i d'un canal
+function voiceCommitRange(ch, i, nums, seen, from, to, byTimeout) {
+  const done = ch.committed[i] || (ch.committed[i] = []);
   const known = getKnownBibs();
   const items = nums.slice(from, to).map((bib, k) => ({ bib, ts: seen[from + k] || Date.now() }));
   const fixed = fixWithStartList(items, known);
@@ -5005,10 +5023,76 @@ function voiceCommitRange(i, nums, seen, from, to, byTimeout) {
   }
 }
 
-function voiceFlushPending() {
-  clearTimeout(voicePendingTimer); voicePendingTimer = null;
-  const f = voicePendingFlush; voicePendingFlush = null;
+function voiceFlushPending(ch) {
+  ch = ch || voiceCh;
+  clearTimeout(ch.timer); ch.timer = null;
+  const f = ch.flush; ch.flush = null;
   if (f) f();
+}
+
+// Traite un texte dicté (qui peut encore évoluer tant que isFinal est faux)
+function voiceProcessTranscript(ch, i, txt, isFinal) {
+  const now = Date.now();
+  showVoiceHeard(txt.length > 60 ? '…' + txt.slice(-60) : txt);
+  const nums = extractNumbers(txt);
+  const seen = ch.seen[i] || (ch.seen[i] = []);
+  for (let k = seen.length; k < nums.length; k++) seen[k] = now;
+  const done = ch.committed[i] || (ch.committed[i] = []);
+
+  // Un numéro validé "par délai" a été complété ensuite ("700" -> "759") : on corrige
+  for (let k = 0; k < done.length; k++) {
+    if (done[k] && done[k].byTimeout && nums[k] !== undefined && nums[k] !== done[k].raw) {
+      done[k].items.forEach(x => undoBurstPassage(x.bib, x.res, x.chip, true));
+      done.length = k;
+      seen.length = Math.min(seen.length, k + 1);
+      break;
+    }
+  }
+
+  // Tous les numéros suivis d'un autre sont sûrs ; au final, tous le sont
+  const stableCount = isFinal ? nums.length : Math.max(0, nums.length - 1);
+  if (stableCount > done.length) voiceCommitRange(ch, i, nums, seen, done.length, stableCount, false);
+
+  // Le dernier numéro : validé s'il ne bouge plus pendant un court instant
+  clearTimeout(ch.timer); ch.timer = null; ch.flush = null;
+  if (!isFinal && nums.length > done.length) {
+    const from = done.length, to = nums.length, snap = nums.slice();
+    ch.flush = () => {
+      const d = ch.committed[i] || [];
+      if (d.length === from) voiceCommitRange(ch, i, snap, seen, from, to, true);
+    };
+    ch.timer = setTimeout(() => voiceFlushPending(ch), ch === kbCh ? KB_STABLE_MS : VOICE_STABLE_MS);
+  }
+}
+
+/* ── Dictée par le clavier (iPhone) ─────────────────────── */
+const KB_STABLE_MS = 900;
+function voiceShowKb(show) {
+  const z = document.getElementById('voice-kb-zone');
+  if (z) z.style.display = show ? 'block' : 'none';
+}
+function voiceKbInput() {
+  const ta = document.getElementById('voice-kb');
+  if (!ta.value.trim()) { voiceKbReset(false); return; }
+  voiceProcessTranscript(kbCh, 'kb', ta.value, false);
+}
+function voiceKbBlur() {
+  const ta = document.getElementById('voice-kb');
+  if (ta.value.trim()) { voiceFlushPending(kbCh); voiceProcessTranscript(kbCh, 'kb', ta.value, true); }
+}
+function voiceKbReset(clearText) {
+  voiceFlushPending(kbCh);
+  kbCh.committed = {}; kbCh.seen = {};
+  const ta = document.getElementById('voice-kb');
+  if (clearText && ta) { ta.value = ''; ta.focus(); }
+  showVoiceHeard('');
+}
+function voiceKbFocus() {
+  const ta = document.getElementById('voice-kb');
+  if (!ta) return;
+  voiceShowKb(true);
+  ta.focus();
+  setVoiceStatus('Touchez 🎤 sur le clavier, puis dictez les dossards à la suite', 'listening');
 }
 
 function initVoice() {
@@ -5033,7 +5117,7 @@ function initVoice() {
   voiceRecognition.onstart = () => {
     voiceListening = true;
     voiceGotResult = false;
-    voiceCommitted = {}; voiceFirstSeen = {};
+    voiceCh.committed = {}; voiceCh.seen = {};
     const rb = document.getElementById('voice-btn'); if (rb) rb.classList.remove('resume');
     if (voiceContinuousMode) voiceKeepAwake(true);
     setVoiceState('listening');
@@ -5065,40 +5149,8 @@ function initVoice() {
 
     // Mode rafale
     voiceGotResult = true;
-    const now = Date.now();
     for (let i = e.resultIndex; i < e.results.length; i++) {
-      const r = e.results[i];
-      const txt = r[0].transcript;
-      showVoiceHeard(txt);
-      const nums = extractNumbers(txt);
-      const seen = voiceFirstSeen[i] || (voiceFirstSeen[i] = []);
-      for (let k = seen.length; k < nums.length; k++) seen[k] = now;
-      const done = voiceCommitted[i] || (voiceCommitted[i] = []);
-
-      // Un numéro validé "par délai" a été complété ensuite ("700" -> "759") : on corrige
-      for (let k = 0; k < done.length; k++) {
-        if (done[k] && done[k].byTimeout && nums[k] !== undefined && nums[k] !== done[k].raw) {
-          done[k].items.forEach(x => undoBurstPassage(x.bib, x.res, x.chip, true));
-          done.length = k;
-          seen.length = Math.min(seen.length, k + 1);
-          break;
-        }
-      }
-
-      // Tous les numéros suivis d'un autre sont sûrs ; au final, tous le sont
-      const stableCount = r.isFinal ? nums.length : Math.max(0, nums.length - 1);
-      if (stableCount > done.length) voiceCommitRange(i, nums, seen, done.length, stableCount, false);
-
-      // Le dernier numéro : validé s'il ne bouge plus pendant 0,7 s (certains téléphones n'envoient jamais de résultat "final")
-      clearTimeout(voicePendingTimer); voicePendingTimer = null; voicePendingFlush = null;
-      if (!r.isFinal && nums.length > done.length) {
-        const from = done.length, to = nums.length, snap = nums.slice();
-        voicePendingFlush = () => {
-          const d = voiceCommitted[i] || [];
-          if (d.length === from) voiceCommitRange(i, snap, seen, from, to, true);
-        };
-        voicePendingTimer = setTimeout(voiceFlushPending, VOICE_STABLE_MS);
-      }
+      voiceProcessTranscript(voiceCh, i, e.results[i][0].transcript, e.results[i].isFinal);
     }
   };
 
@@ -5111,9 +5163,13 @@ function initVoice() {
       return;   // en rafale : normal, onend relance
     }
     if (e.error === 'service-not-allowed' || e.error === 'audio-capture') {
+      if (voiceContinuousMode) voiceShowKb(true);   // solution de repli : dictée du clavier
       if (voiceContinuousMode && voiceAutoRestart) {
         // Relance automatique refusée par le téléphone : on attend un appui
         voiceAskForTap();
+      } else if (voiceContinuousMode) {
+        stopVoiceListening();
+        setVoiceStatus('Micro bloqué par le téléphone — utilisez la zone de dictée ci-dessous avec le 🎤 du clavier', 'listening');
       } else {
         stopVoiceListening();
         setVoiceStatus(VOICE_IS_IOS
@@ -5132,7 +5188,7 @@ function initVoice() {
 
   voiceRecognition.onend = () => {
     voiceFlushPending();   // ne pas perdre le dernier numéro dicté avant la coupure
-    voiceCommitted = {}; voiceFirstSeen = {};
+    voiceCh.committed = {}; voiceCh.seen = {};
     if (voiceListening && voiceContinuousMode) {
       // Relances trop fréquentes sans rien reconnaître = le téléphone bloque : on demande un appui
       const now = Date.now();
@@ -5157,6 +5213,15 @@ function toggleVoiceContinuousMode() {
   if (label) label.classList.toggle('active', voiceContinuousMode);
   const log = document.getElementById('voice-burst-log');
   if (log) log.style.display = voiceContinuousMode ? 'flex' : 'none';
+  const hasSR = !!(window.SpeechRecognition || window.webkitSpeechRecognition);
+  const useKb = voiceContinuousMode && (VOICE_IS_IOS || !hasSR);
+  voiceShowKb(useKb);
+  if (useKb) {
+    const btn = document.getElementById('voice-btn');
+    if (btn) { btn.disabled = false; btn.style.opacity = ''; }
+    if (!voiceListening) setVoiceStatus('Mode rafale — touchez la zone ci-dessous, puis le 🎤 du clavier', '');
+    return;
+  }
   try { localStorage.setItem('kiptrack_voice_burst', voiceContinuousMode ? '1' : '0'); } catch(e) {}
   if (!voiceListening) {
     setVoiceStatus(voiceContinuousMode
@@ -5227,6 +5292,8 @@ function parseVoiceNumber(transcript) {
 }
 
 function toggleVoice() {
+  const hasSR = !!(window.SpeechRecognition || window.webkitSpeechRecognition);
+  if (voiceContinuousMode && (VOICE_IS_IOS || !hasSR)) { voiceKbFocus(); return; }
   if (voiceListening) {
     stopVoiceListening();
     return;

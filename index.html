@@ -1601,6 +1601,22 @@ select option { background: var(--surface2); color: var(--text); }
   font-size: 12.5px; color: var(--text2); cursor: pointer;
   margin: 4px 0 12px; max-width: 340px; text-align: left; user-select: none;
 }
+.voice-burst-log {
+  flex-wrap: wrap; gap: 6px; justify-content: center;
+  width: 100%; max-width: 360px; margin: 8px 0 12px;
+}
+.voice-burst-empty { font-size: 12px; color: var(--text3); text-align: center; }
+.voice-burst-chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 5px 11px; border-radius: 999px; font: inherit; font-size: 15px;
+  font-variant-numeric: tabular-nums; background: transparent; cursor: pointer;
+  border: 1.5px solid var(--success); color: var(--success);
+  animation: burstIn .18s ease-out;
+}
+.voice-burst-chip span { font-size: 11px; opacity: .75; }
+.voice-burst-chip.unknown { border-color: var(--warning); color: var(--warning); border-style: dashed; }
+.voice-burst-chip.cancelled { border-color: var(--text3); color: var(--text3); text-decoration: line-through; cursor: default; }
+@keyframes burstIn { from { transform: scale(.8); opacity: 0; } to { transform: none; opacity: 1; } }
 .voice-continuous-toggle input { width: 16px; height: 16px; accent-color: var(--primary); cursor: pointer; flex-shrink: 0; }
 .voice-continuous-toggle.active span { color: var(--primary); font-weight: 600; }
 .voice-waves {
@@ -1992,7 +2008,7 @@ code { background: var(--surface2); }
       <!-- Mode continu : dictée en rafale sans confirmation -->
       <label class="voice-continuous-toggle" id="voice-continuous-label">
         <input type="checkbox" id="voice-continuous-checkbox" onchange="toggleVoiceContinuousMode()">
-        <span>Mode continu — enregistre chaque dossard annoncé sans confirmation</span>
+        <span>Mode rafale — dictez les dossards à la suite, chacun est enregistré automatiquement</span>
       </label>
 
       <!-- Saisie clavier + bouton micro -->
@@ -2009,6 +2025,11 @@ code { background: var(--surface2); }
 
       <!-- Statut vocal -->
       <div class="voice-status" id="voice-status">Appuyez sur le micro pour dicter le dossard</div>
+
+      <!-- Fil des dossards dictés en rafale (toucher pour annuler / forcer) -->
+      <div class="voice-burst-log" id="voice-burst-log" style="display:none;">
+        <div class="voice-burst-empty">Les dossards dictés s'afficheront ici — touchez-en un pour l'annuler.</div>
+      </div>
 
       <!-- Prévisualisation avant confirmation -->
       <div class="voice-preview" id="voice-preview">
@@ -3464,31 +3485,38 @@ function updateAddPassageCpSelect() {
 function selectCp(id) { selectedCp=id; renderCpSelector(); document.getElementById('confirm-msg').textContent=''; document.getElementById('bib-input').focus(); }
 function handleBibKey(e) { if (e.key==='Enter') recordBib(); }
 
-function recordBib() {
-  const bib = parseInt(document.getElementById('bib-input').value);
-  if (!bib||bib<=0) { showConfirm('Dossard invalide.',true); return; }
-  if (!selectedCp) { showConfirm("Sélectionnez d'abord un point de passage.",true); return; }
+// Enregistre un passage. Renvoie null si impossible, sinon {bib, cp, timeStr, prev}.
+function savePassage(bib, ts) {
+  if (!bib||bib<=0) { showConfirm('Dossard invalide.',true); return null; }
+  if (!selectedCp) { showConfirm("Sélectionnez d'abord un point de passage.",true); return null; }
   const cp = state.checkpoints.find(c=>c.id===selectedCp);
-  if (!cp) return;
-  const now = new Date(); const timeStr = now.toTimeString().slice(0,8);
-  const already = state.passages[bib]&&state.passages[bib][selectedCp];
+  if (!cp) return null;
+  const now = new Date(ts || Date.now()); const timeStr = now.toTimeString().slice(0,8);
+  const prev = state.passages[bib]&&state.passages[bib][selectedCp] ? {...state.passages[bib][selectedCp]} : null;
   if (!state.passages[bib]) state.passages[bib]={};
   state.passages[bib][selectedCp]={time:timeStr,ts:now.getTime()};
   saveState();
   const runnerName = (state.runners&&state.runners[bib]) ? ` — ${state.runners[bib].name||state.runners[bib]}` : '';
-  const alreadyMsg = already ? ` (remplace ${already.time})` : '';
+  const alreadyMsg = prev ? ` (remplace ${prev.time})` : '';
   showConfirm(`✓ Dossard ${bib}${runnerName} — ${timeStr}${alreadyMsg}`,false);
-  // Reset voice UI if active
-  voicePendingBib = null;
-  const vp = document.getElementById('voice-preview');
-  if (vp) vp.classList.remove('show');
-  setVoiceState('idle');
   recentBibs.unshift({bib,time:timeStr,cpName:cp.name});
   if (recentBibs.length>10) recentBibs.pop();
   renderRecentBibs();
+  renderRanking(); updateStats(); renderPassagesList();
+  return {bib, cpId: cp.id, timeStr, prev};
+}
+
+function recordBib() {
+  const bib = parseInt(document.getElementById('bib-input').value);
+  const res = savePassage(bib);
+  if (!res) return;
+  // Reset voice UI (mode confirmation / saisie clavier)
+  voicePendingBib = null;
+  const vp = document.getElementById('voice-preview');
+  if (vp) vp.classList.remove('show');
+  if (!voiceListening) setVoiceState('idle');
   document.getElementById('bib-input').value='';
   document.getElementById('bib-input').focus();
-  renderRanking(); updateStats(); renderPassagesList();
 }
 
 function showConfirm(msg,isError) {
@@ -4778,6 +4806,142 @@ let voiceListening = false;
 let voicePendingBib = null;
 let voiceContinuousMode = false;
 
+// ── Dictée en rafale ──────────────────────────────
+const VOICE_BURST = { dedupeMs: 20000, vibrate: true, beep: true };
+let voiceCommitted = {};   // index de résultat -> nb de dossards déjà enregistrés
+let voiceFirstSeen = {};   // index de résultat -> [horodatage de 1ère écoute de chaque numéro]
+let voiceLastSeen = new Map(); // "bib|cp" -> ts
+let voiceAudioCtx = null;
+
+function getKnownBibs() {
+  return new Set(Object.keys(state.runners || {}).map(String));
+}
+
+const FR_NUM = { 'zéro':0,'zero':0,'un':1,'une':1,'deux':2,'trois':3,'quatre':4,'cinq':5,'six':6,
+  'sept':7,'huit':8,'neuf':9,'dix':10,'onze':11,'douze':12,'treize':13,'quatorze':14,'quinze':15,
+  'seize':16,'vingt':20,'vingts':20,'trente':30,'quarante':40,'cinquante':50,'soixante':60,
+  'cent':100,'cents':100,'mille':1000 };
+
+// "759 868" / "sept cent cinquante-neuf huit cent soixante-huit" -> ['759','868']
+function extractNumbers(text) {
+  const tokens = text.toLowerCase().replace(/[-.,]/g, ' ').split(/\s+/).filter(Boolean);
+  const out = [];
+  let cur = null, total = 0;
+  const flush = () => { if (cur !== null || total) out.push(String(total + (cur || 0))); cur = null; total = 0; };
+  for (const t of tokens) {
+    if (/^\d+$/.test(t)) { flush(); out.push(String(parseInt(t, 10))); continue; }
+    if (t === 'et') continue;
+    const v = FR_NUM[t];
+    if (v === undefined) { flush(); continue; }
+    if (v === 100) { cur = (cur || 1) * 100; continue; }
+    if (v === 1000) { total += (cur || 1) * 1000; cur = 0; continue; }
+    const c = cur || 0, low = c % 100;
+    if (v === 20 && low === 4) { cur = c + 76; continue; }            // quatre-vingt
+    const teenOk = v >= 10 && v < 20 && (low === 60 || low === 80);    // soixante-dix, quatre-vingt-dix
+    const newNum = cur !== null && (
+      (v < 10 && low % 10 !== 0) ||
+      (v >= 10 && v < 20 && low !== 0 && !teenOk) ||
+      (v >= 20 && low !== 0)
+    );
+    if (newNum) flush();
+    cur = (cur || 0) + v;
+  }
+  flush();
+  return out;
+}
+
+// Corrige avec la liste des inscrits : "1 200" -> 1200, "759868" -> 759 + 868
+function fixWithStartList(items, known) {
+  if (!known.size) return items.map(x => ({ ...x, known: true }));
+  const res = [];
+  for (let i = 0; i < items.length; i++) {
+    const n = items[i].bib, next = items[i + 1] && items[i + 1].bib;
+    if (next && next.length === 3 && n.length <= 2 && known.has(n + next) && !(known.has(n) && known.has(next))) {
+      res.push({ bib: n + next, ts: items[i].ts, known: true }); i++; continue;
+    }
+    if (known.has(n)) { res.push({ ...items[i], known: true }); continue; }
+    let split = null;
+    for (let k = 1; k < n.length; k++) {
+      const a = n.slice(0, k), b = n.slice(k);
+      if (!b.startsWith('0') && known.has(a) && known.has(b)) { split = [a, b]; break; }
+    }
+    if (split) split.forEach(b => res.push({ bib: b, ts: items[i].ts, known: true }));
+    else res.push({ ...items[i], known: false });
+  }
+  return res;
+}
+
+function voiceBurstCommit(bib, ts, known) {
+  if (!selectedCp) {
+    stopVoiceListening();
+    showConfirm("Sélectionnez d'abord un point de passage.", true);
+    return;
+  }
+  const key = bib + '|' + selectedCp;
+  const last = voiceLastSeen.get(key);
+  if (last && ts - last < VOICE_BURST.dedupeMs) return;   // doublon (répétition / relance du micro)
+  voiceLastSeen.set(key, ts);
+  if (!known) { addBurstChip(bib, ts, null, 'unknown'); voiceFeedback(false); return; }
+  const res = savePassage(parseInt(bib, 10), ts);
+  if (!res) return;
+  addBurstChip(bib, ts, res, 'ok');
+  voiceFeedback(true);
+  setVoiceStatus(`Dossard ${bib} enregistré — continuez…`, 'listening');
+}
+
+function voiceFeedback(ok) {
+  if (VOICE_BURST.vibrate && navigator.vibrate) navigator.vibrate(ok ? 40 : [40, 60, 40]);
+  if (VOICE_BURST.beep && voiceAudioCtx) {
+    try {
+      const o = voiceAudioCtx.createOscillator(), g = voiceAudioCtx.createGain();
+      o.frequency.value = ok ? 1400 : 500; g.gain.value = 0.08;
+      o.connect(g); g.connect(voiceAudioCtx.destination);
+      o.start(); o.stop(voiceAudioCtx.currentTime + (ok ? 0.05 : 0.15));
+    } catch (e) {}
+  }
+}
+
+function addBurstChip(bib, ts, res, stateCls) {
+  const log = document.getElementById('voice-burst-log');
+  if (!log) return;
+  const hint = log.querySelector('.voice-burst-empty'); if (hint) hint.remove();
+  const chip = document.createElement('button');
+  chip.type = 'button';
+  chip.className = 'voice-burst-chip ' + stateCls;
+  const name = getRunnerName(parseInt(bib, 10));
+  chip.title = stateCls === 'ok'
+    ? `${name ? name + ' — ' : ''}${new Date(ts).toTimeString().slice(0,8)} · toucher pour annuler`
+    : 'Dossard non inscrit — toucher pour l\'enregistrer quand même';
+  chip.innerHTML = `<strong>${bib}</strong><span>${stateCls === 'ok' ? '✕' : '+'}</span>`;
+  chip.onclick = () => {
+    if (chip.classList.contains('ok')) {
+      // Annuler : restaure le passage précédent éventuel
+      if (state.passages[bib]) {
+        if (res.prev) state.passages[bib][res.cpId] = res.prev;
+        else {
+          delete state.passages[bib][res.cpId];
+          if (!Object.keys(state.passages[bib]).length) delete state.passages[bib];
+        }
+      }
+      const idx = recentBibs.findIndex(r => String(r.bib) === String(bib) && r.time === res.timeStr);
+      if (idx >= 0) recentBibs.splice(idx, 1);
+      voiceLastSeen.delete(bib + '|' + res.cpId);
+      saveState(); renderRecentBibs(); renderRanking(); updateStats(); renderPassagesList();
+      showConfirm(`Passage du dossard ${bib} annulé.`, true);
+      chip.classList.replace('ok', 'cancelled'); chip.disabled = true;
+      chip.querySelector('span').textContent = 'annulé';
+    } else if (chip.classList.contains('unknown')) {
+      res = savePassage(parseInt(bib, 10), ts);
+      if (!res) return;
+      voiceFeedback(true);
+      chip.classList.replace('unknown', 'ok');
+      chip.querySelector('span').textContent = '✕';
+    }
+  };
+  log.prepend(chip);
+  while (log.children.length > 16) log.lastChild.remove();
+}
+
 function initVoice() {
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   const btn = document.getElementById('voice-btn');
@@ -4793,78 +4957,79 @@ function initVoice() {
   }
   voiceRecognition = new SpeechRecognition();
   voiceRecognition.lang = 'fr-FR';
-  voiceRecognition.interimResults = false;
-  voiceRecognition.maxAlternatives = 5;
-  // Toujours "continuous" côté moteur : c'est notre logique JS (voiceContinuousMode)
-  // qui décide si on s'arrête après un dossard (mode confirmation) ou si on
-  // continue à écouter et enregistrer automatiquement (mode continu).
   voiceRecognition.continuous = true;
+  voiceRecognition.interimResults = true;   // indispensable pour la rafale
+  voiceRecognition.maxAlternatives = 3;
 
   voiceRecognition.onstart = () => {
     voiceListening = true;
+    voiceCommitted = {}; voiceFirstSeen = {};
     setVoiceState('listening');
+    if (voiceContinuousMode) setVoiceStatus('Mode rafale — dictez les dossards à la suite', 'listening');
   };
 
   voiceRecognition.onresult = (e) => {
-    for (let i = e.resultIndex; i < e.results.length; i++) {
-      const result = e.results[i];
-      if (!result.isFinal) continue;
-
-      let detected = null;
-      for (let j = 0; j < result.length; j++) {
-        const num = parseVoiceNumber(result[j].transcript.trim());
-        if (num) { detected = num; break; }
-      }
-
-      if (voiceContinuousMode) {
-        // Mode continu : chaque dossard reconnu est enregistré immédiatement,
-        // sans interrompre l'écoute — idéal pour dicter plusieurs dossards à la suite.
-        if (detected) {
-          document.getElementById('bib-input').value = detected;
-          recordBib();
-          setVoiceState('listening');
-          setVoiceStatus(`Dossard ${detected} enregistré — continuez à dicter…`, 'success');
+    if (!voiceContinuousMode) {
+      // Mode confirmation : un seul dossard, sur résultat final
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        const result = e.results[i];
+        if (!result.isFinal) continue;
+        let detected = null;
+        for (let j = 0; j < result.length; j++) {
+          const num = parseVoiceNumber(result[j].transcript.trim());
+          if (num) { detected = num; break; }
         }
-        // Rien de détecté : on ignore et on continue d'écouter silencieusement.
-      } else {
-        // Mode confirmation (par défaut) : un seul dossard à la fois, avec validation manuelle.
         stopVoiceListening();
-        if (detected) {
-          showVoicePreview(detected);
-        } else {
+        if (detected) showVoicePreview(detected);
+        else {
           setVoiceState('idle');
           setVoiceStatus('Dossard non reconnu — réessayez', 'listening');
           setTimeout(() => setVoiceStatus('Appuyez sur le micro pour dicter le dossard', ''), 2500);
         }
         return;
       }
+      return;
     }
-  };
 
-  voiceRecognition.onerror = (e) => {
-    const msgs = {
-      'not-allowed': 'Micro refusé — autorisez l\'accès dans le navigateur',
-      'no-speech': voiceContinuousMode ? '' : 'Rien entendu — réessayez',
-      'network': 'Erreur réseau',
-      'aborted': ''
-    };
-    const msg = msgs[e.error] || `Erreur : ${e.error}`;
-    // En mode continu, une erreur "no-speech" est normale (silence) : on ne coupe pas l'écoute,
-    // onend se chargera de relancer automatiquement.
-    if (!voiceContinuousMode || (e.error !== 'no-speech' && e.error !== 'aborted')) {
-      if (e.error === 'not-allowed' || e.error === 'network') stopVoiceListening();
-      if (msg) {
-        setVoiceStatus(msg, 'listening');
-        if (!voiceContinuousMode) setTimeout(() => setVoiceStatus('Appuyez sur le micro pour dicter le dossard', ''), 3000);
+    // Mode rafale
+    const known = getKnownBibs();
+    const now = Date.now();
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      const r = e.results[i];
+      const nums = extractNumbers(r[0].transcript);
+      const seen = voiceFirstSeen[i] || (voiceFirstSeen[i] = []);
+      for (let k = seen.length; k < nums.length; k++) seen[k] = now;   // heure où le numéro a été entendu
+      // En intermédiaire, le dernier numéro peut encore évoluer ("sept cent" -> "sept cent cinquante-neuf")
+      const stableCount = r.isFinal ? nums.length : Math.max(0, nums.length - 1);
+      const done = voiceCommitted[i] || 0;
+      if (stableCount > done) {
+        const items = nums.slice(done, stableCount).map((bib, k) => ({ bib, ts: seen[done + k] || now }));
+        fixWithStartList(items, known).forEach(x => voiceBurstCommit(x.bib, x.ts, x.known));
+        voiceCommitted[i] = stableCount;
       }
     }
   };
 
+  voiceRecognition.onerror = (e) => {
+    if (e.error === 'no-speech' || e.error === 'aborted') {
+      if (!voiceContinuousMode && e.error === 'no-speech') {
+        setVoiceStatus('Rien entendu — réessayez', 'listening');
+        setTimeout(() => setVoiceStatus('Appuyez sur le micro pour dicter le dossard', ''), 3000);
+      }
+      return;   // en rafale : normal, onend relance
+    }
+    const msgs = {
+      'not-allowed': 'Micro refusé — autorisez l\'accès dans le navigateur',
+      'network': 'Pas de réseau — la dictée Chrome nécessite Internet. Utilisez le clavier.',
+    };
+    stopVoiceListening();
+    setVoiceStatus(msgs[e.error] || `Erreur : ${e.error}`, 'listening');
+  };
+
   voiceRecognition.onend = () => {
+    voiceCommitted = {}; voiceFirstSeen = {};
     if (voiceListening && voiceContinuousMode) {
-      // Le moteur vocal s'arrête parfois tout seul après un silence prolongé :
-      // en mode continu on le relance automatiquement, de façon transparente.
-      try { voiceRecognition.start(); } catch(e) {}
+      try { voiceRecognition.start(); } catch(e) {}   // relance immédiate et transparente
     } else if (voiceListening) {
       stopVoiceListening();
     }
@@ -4876,14 +5041,25 @@ function toggleVoiceContinuousMode() {
   const label = document.getElementById('voice-continuous-label');
   voiceContinuousMode = checkbox ? checkbox.checked : false;
   if (label) label.classList.toggle('active', voiceContinuousMode);
+  const log = document.getElementById('voice-burst-log');
+  if (log) log.style.display = voiceContinuousMode ? 'flex' : 'none';
+  try { localStorage.setItem('kiptrack_voice_burst', voiceContinuousMode ? '1' : '0'); } catch(e) {}
   if (!voiceListening) {
     setVoiceStatus(voiceContinuousMode
-      ? 'Mode continu activé — appuyez sur le micro puis dictez les dossards à la suite'
+      ? 'Mode rafale activé — appuyez sur le micro puis dictez les dossards à la suite'
       : 'Appuyez sur le micro pour dicter le dossard', '');
   }
 }
 
-
+// Restaure le choix du mode rafale au chargement
+document.addEventListener('DOMContentLoaded', () => {
+  try {
+    if (localStorage.getItem('kiptrack_voice_burst') === '1') {
+      const cb = document.getElementById('voice-continuous-checkbox');
+      if (cb) { cb.checked = true; toggleVoiceContinuousMode(); }
+    }
+  } catch(e) {}
+});
 
 function parseVoiceNumber(transcript) {
   // Direct digits
@@ -4943,6 +5119,8 @@ function toggleVoice() {
   }
   if (!voiceRecognition) { initVoice(); }
   if (!voiceRecognition) return;
+  if (!voiceAudioCtx) { try { voiceAudioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch(e) {} }
+  if (voiceAudioCtx && voiceAudioCtx.state === 'suspended') voiceAudioCtx.resume();
 
   // Hide preview if shown
   voiceCancel(true);

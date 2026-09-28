@@ -930,6 +930,9 @@ select option { background: var(--surface2); color: var(--text); }
 .ranking-table tr:last-child td { border-bottom: none; }
 .ranking-table tr:hover td { background: rgba(255,255,255,0.025); cursor: pointer; }
 
+.ranking-table tr.unranked td { opacity: .55; }
+.ranking-table tr.unranked-sep td { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; color: var(--text3); background: var(--surface2); padding: 6px 14px; cursor: default; }
+.ranking-table tr.unranked-sep:hover td { background: var(--surface2); }
 .rank-num { font-weight: 700; font-size: 13px; color: var(--text3); }
 .rank-1 .rank-num { color: #F59E0B; font-size: 16px; }
 .rank-2 .rank-num { color: #A1A1AA; font-size: 15px; }
@@ -2001,7 +2004,7 @@ code { background: var(--surface2); }
     <div class="active-filter-bar" id="active-filter-bar" style="display:none;">
       <div>
         <div class="active-filter-label" id="active-filter-label">Classement au point —</div>
-        <div class="active-filter-sub">Classement trié par heure de passage à ce point — le numéro affiché reste le classement général</div>
+        <div class="active-filter-sub">Classement et heures de passage à ce point — les coureurs pas encore flashés ici sont en bas, sans rang</div>
       </div>
       <button class="clear-filter-btn" onclick="clearCpFilter()">✕ Supprimer le filtre</button>
     </div>
@@ -3721,7 +3724,7 @@ function getAllBibsGeneral() {
 
 function getAllBibs(cpFilter, searchQ) {
   let allBibs = getAllBibsGeneral();
-  if (cpFilter !== 'all') allBibs = allBibs.filter(bib => state.passages[bib] && state.passages[bib][cpFilter]);
+  if (cpFilter !== 'all') allBibs = allBibs.filter(bib => cpAppliesToBib(bib, cpFilter));
   if (searchQ) allBibs = allBibs.filter(bib => String(bib).includes(searchQ) || (getRunnerName(bib)||'').toLowerCase().includes(searchQ) || (getRunnerCategory(bib)||'').toLowerCase().includes(searchQ));
   if (showOnlyFavs) allBibs = allBibs.filter(bib => favoriteBibs.has(bib));
   return allBibs;
@@ -3744,65 +3747,104 @@ function buildFormatSection(fmt, bibs, sortBy, fullBibs) {
 // retourne une correspondance dossard → rang général (1er, 2e, 3e...), pour que le
 // numéro affiché reste le vrai classement général même quand la liste visible est
 // restreinte par un filtre (point de passage, recherche, favoris).
-function computeRankMap(fullBibs, sortBy) {
-  const sorted = [...fullBibs];
-  if (sortBy==='progress') {
-    sorted.sort((a,b)=>{ const pa=getRunnerProgress(a),pb=getRunnerProgress(b); if(pb.count!==pa.count) return pb.count-pa.count; return pa.lastTs-pb.lastTs; });
-  } else if (sortBy==='last-time') {
-    sorted.sort((a,b)=>getRunnerProgress(a).lastTs-getRunnerProgress(b).lastTs);
-  } else {
-    sorted.sort((a,b)=>a-b);
+// Le point de référence d'un coureur pour le classement :
+//  - sans filtre : le point le plus avancé (km) où il a été flashé
+//  - avec filtre : le point sélectionné, s'il y a été flashé
+// Renvoie { cp, ts } ou null (coureur non classé).
+function getRankingPoint(bib, cpFilter) {
+  const passages = state.passages[bib] || {};
+  if (cpFilter && cpFilter !== 'all') {
+    const p = passages[cpFilter];
+    if (!p) return null;
+    const cp = (state.checkpoints || []).find(c => c.id === cpFilter);
+    return cp ? { cp, ts: p.ts } : null;
   }
+  let best = null;
+  for (const cp of getApplicableCheckpoints(getRunnerFormat(bib))) {
+    const p = passages[cp.id];
+    if (!p) continue;
+    const km = parseFloat(cp.km) || 0;
+    if (!best || km > best.km || (km === best.km && p.ts < best.ts)) best = { cp, ts: p.ts, km };
+  }
+  return best;
+}
+
+function cpAppliesToBib(bib, cpId) {
+  return getApplicableCheckpoints(getRunnerFormat(bib)).some(c => c.id === cpId);
+}
+
+// Rang de chaque coureur classé. Les coureurs jamais flashés (ou non flashés au point filtré) n'ont pas de rang.
+function computeRankMap(fullBibs, cpFilter) {
+  const ranked = [];
+  fullBibs.forEach(bib => { const pt = getRankingPoint(bib, cpFilter); if (pt) ranked.push({ bib, pt }); });
+  ranked.sort((a, b) => {
+    if (!cpFilter || cpFilter === 'all') {
+      const ka = parseFloat(a.pt.cp.km) || 0, kb = parseFloat(b.pt.cp.km) || 0;
+      if (kb !== ka) return kb - ka;          // le plus avancé d'abord
+    }
+    return a.pt.ts - b.pt.ts;                 // puis le premier arrivé à ce point
+  });
   const map = new Map();
-  sorted.forEach((bib, i) => map.set(bib, i + 1));
+  ranked.forEach((x, i) => map.set(x.bib, i + 1));
   return map;
 }
 
 function buildTable(bibs, sortBy, fullBibs) {
   fullBibs = fullBibs && fullBibs.length ? fullBibs : bibs;
-  const rankMap = computeRankMap(fullBibs, sortBy);
-  // Le vrai 1er de la course (référence pour "Écart 1er"), même s'il n'apparaît pas
-  // dans la liste actuellement affichée (ex. filtré, non favori, etc.).
+  const cpFilter = document.getElementById('cp-filter').value;
+  const filtered = cpFilter !== 'all';
+  if (filtered) {
+    bibs = bibs.filter(bib => cpAppliesToBib(bib, cpFilter));
+    fullBibs = fullBibs.filter(bib => cpAppliesToBib(bib, cpFilter));
+  }
+  const rankMap = computeRankMap(fullBibs, cpFilter);
   let leaderBib = null;
   for (const [bib, rank] of rankMap) { if (rank === 1) { leaderBib = bib; break; } }
-  const leaderTs = leaderBib != null ? (getRunnerProgress(leaderBib).lastTs || 0) : 0;
 
-  let sorted = [...bibs];
-  const cpFilter = document.getElementById('cp-filter').value;
-  if (cpFilter !== 'all') {
-    // Un point de passage précis est sélectionné : l'ORDRE d'affichage suit l'heure
-    // de passage à CE point (comme un chrono intermédiaire). Le numéro de rang affiché
-    // (colonne #) reste néanmoins le classement général, calculé plus haut via rankMap.
-    sorted.sort((a, b) => {
-      const ta = (state.passages[a] && state.passages[a][cpFilter]) ? state.passages[a][cpFilter].ts : Infinity;
-      const tb = (state.passages[b] && state.passages[b][cpFilter]) ? state.passages[b][cpFilter].ts : Infinity;
-      return ta - tb;
-    });
-  } else if (sortBy==='progress') {
-    sorted.sort((a,b)=>{ const pa=getRunnerProgress(a),pb=getRunnerProgress(b); if(pb.count!==pa.count) return pb.count-pa.count; return pa.lastTs-pb.lastTs; });
-  } else if (sortBy==='last-time') {
-    sorted.sort((a,b)=>getRunnerProgress(a).lastTs-getRunnerProgress(b).lastTs);
+  // Classés d'abord (dans l'ordre demandé), non classés en bas
+  const ranked = bibs.filter(b => rankMap.has(b));
+  const unranked = bibs.filter(b => !rankMap.has(b)).sort((a, b) => a - b);
+  let sorted;
+  if (sortBy === 'bib') {
+    sorted = [...bibs].sort((a, b) => a - b);
   } else {
-    sorted.sort((a,b)=>a-b);
+    if (sortBy === 'last-time') {
+      ranked.sort((a, b) => getRankingPoint(a, cpFilter).ts - getRankingPoint(b, cpFilter).ts);
+    } else {
+      ranked.sort((a, b) => rankMap.get(a) - rankMap.get(b));
+    }
+    sorted = [...ranked, ...unranked];
   }
+  const showSeparator = sortBy !== 'bib' && ranked.length > 0 && unranked.length > 0;
+  // Heure du premier passage à chaque point (référence de l'écart)
+  const firstTsByCp = {};
+  fullBibs.forEach(b => {
+    const ps = state.passages[b]; if (!ps) return;
+    for (const cpId in ps) { const t = ps[cpId] && ps[cpId].ts; if (t && (!firstTsByCp[cpId] || t < firstTsByCp[cpId])) firstTsByCp[cpId] = t; }
+  });
 
   const hasFormats = state.formats && state.formats.length > 0;
   const hasCategories = state.runners && Object.values(state.runners).some(r => typeof r === 'object' && r.ageCategory);
+  const nCols = 9 + (hasFormats ? 1 : 0) + (hasCategories ? 1 : 0);
 
   let html = `<table class="ranking-table"><thead><tr>
-    <th style="width:32px;"></th><th>#</th><th>Dossard</th><th>Coureur</th>${hasFormats?'<th>Course</th>':''}${hasCategories?'<th>Cat.</th>':''}
-    <th>Dernier point</th><th>Heure</th><th>Écart 1er</th><th>Avancement</th><th></th>
+    <th style="width:32px;"></th><th>${filtered ? '# au point' : '#'}</th><th>Dossard</th><th>Coureur</th>${hasFormats?'<th>Course</th>':''}${hasCategories?'<th>Cat.</th>':''}
+    <th>${filtered ? 'Point' : 'Dernier point'}</th><th>${filtered ? 'Heure au point' : 'Heure'}</th><th>${filtered ? 'Écart 1er' : 'Écart au point'}</th><th>Avancement</th><th></th>
   </tr></thead><tbody>`;
 
   sorted.forEach((bib, idx) => {
+    if (showSeparator && bib === unranked[0]) {
+      html += `<tr class="unranked-sep"><td colspan="${nCols}">${filtered ? 'Pas encore flashés à ce point' : 'Pas encore flashés'} · ${unranked.length}</td></tr>`;
+    }
     const prog = getRunnerProgress(bib);
+    const pt = getRankingPoint(bib, cpFilter);
     const name = getRunnerName(bib) || '<span style="color:var(--text3);">—</span>';
     const fmt = getRunnerFormat(bib);
     const fmtInfo = fmt ? getFormatInfo(fmt) : null;
     const cat = getRunnerCategory(bib);
     // Le numéro affiché est le rang RÉEL dans le classement général (rankMap),
     // pas la position dans la liste actuellement filtrée/affichée.
-    const absRank = rankMap.get(bib) || (idx + 1);
+    const absRank = rankMap.get(bib) || null;   // null = non classé
     const rankClass = absRank===1?'rank-1':absRank===2?'rank-2':absRank===3?'rank-3':'';
     const medal = absRank===1?'🥇':absRank===2?'🥈':absRank===3?'🥉':'';
 
@@ -3815,37 +3857,32 @@ function buildTable(bibs, sortBy, fullBibs) {
     const fmtCell = hasFormats ? `<td>${fmtInfo?`<span class="format-badge" style="background:${fmtInfo.color}22;color:${fmtInfo.color};border:1px solid ${fmtInfo.color}44;">${fmtInfo.code}</span>`:'<span style="color:var(--text3);font-size:11px;">—</span>'}</td>` : '';
     const catCell = hasCategories ? `<td>${cat?`<span class="name-category">${cat}</span>`:'<span style="color:var(--text3);font-size:11px;">—</span>'}</td>` : '';
 
-    const cpCols = `<td style="font-size:12px;color:var(--text2);">${prog.lastCp?`Km ${prog.lastCp.km}<br><span style="color:var(--text3);font-size:11px;">${prog.lastCp.name}</span>`:'<span style="color:var(--text3);">—</span>'}</td>
-      <td style="font-family:monospace;font-size:12px;">${prog.lastTs?new Date(prog.lastTs).toTimeString().slice(0,8):'<span style="color:var(--text3);">—</span>'}</td>`;
+    const cpCols = `<td style="font-size:12px;color:var(--text2);">${pt?`Km ${pt.cp.km}<br><span style="color:var(--text3);font-size:11px;">${pt.cp.name}</span>`:'<span style="color:var(--text3);">—</span>'}</td>
+      <td style="font-family:monospace;font-size:12px;">${pt?new Date(pt.ts).toTimeString().slice(0,8):'<span style="color:var(--text3);">—</span>'}</td>`;
 
-    // Gap calculation — toujours par rapport au vrai 1er du classement général
-    let gapCell = '';
+    // Écart : par rapport au premier coureur passé au MÊME point
+    let gapCell = '<td><span class="gap-cell">—</span></td>';
     if (absRank === 1) {
       gapCell = '<td><span class="gap-cell leader">LEADER</span></td>';
-    } else {
-      const runnerTs = prog.lastTs || 0;
-      if (leaderTs > 0 && runnerTs > 0) {
-        const diffMs = runnerTs - leaderTs;
-        const diffSec = Math.round(diffMs / 1000);
-        const h = Math.floor(diffSec / 3600);
-        const m = Math.floor((diffSec % 3600) / 60);
-        const s = diffSec % 60;
-        const gapStr = h > 0
-          ? `+${h}h${String(m).padStart(2,'0')}'${String(s).padStart(2,'0')}`
-          : `+${m}'${String(s).padStart(2,'0')}"`;
-        const gapClass = diffSec < 300 ? 'gap-small' : 'gap-big';
-        gapCell = `<td><span class="gap-cell ${gapClass}">${gapStr}</span></td>`;
+    } else if (pt && firstTsByCp[pt.cp.id]) {
+      const diffSec = Math.max(0, Math.round((pt.ts - firstTsByCp[pt.cp.id]) / 1000));
+      if (diffSec === 0) {
+        gapCell = '<td><span class="gap-cell gap-small">1er ici</span></td>';
       } else {
-        gapCell = '<td><span class="gap-cell">—</span></td>';
+        const h = Math.floor(diffSec / 3600), m = Math.floor((diffSec % 3600) / 60), sec = diffSec % 60;
+        const gapStr = h > 0
+          ? `+${h}h${String(m).padStart(2,'0')}'${String(sec).padStart(2,'0')}`
+          : `+${m}'${String(sec).padStart(2,'0')}"`;
+        gapCell = `<td><span class="gap-cell ${diffSec < 300 ? 'gap-small' : 'gap-big'}">${gapStr}</span></td>`;
       }
     }
 
     const isFav = favoriteBibs.has(bib);
     const starCell = `<td style="padding:10px 4px 10px 10px;"><button class="fav-star ${isFav?'active':''}" onclick="event.stopPropagation();toggleFavorite(${bib})" title="${isFav?'Retirer des favoris':'Ajouter aux favoris'}">★</button></td>`;
 
-    html+=`<tr class="${rankClass}" onclick="showRunnerDetail(${bib})" style="cursor:pointer;">
+    html+=`<tr class="${rankClass}${absRank ? '' : ' unranked'}" onclick="showRunnerDetail(${bib})" style="cursor:pointer;">
       ${starCell}
-      <td><span class="rank-num">${medal||absRank}</span></td>
+      <td><span class="rank-num">${absRank ? (medal||absRank) : '—'}</span></td>
       <td><span class="bib-badge">${bib}</span></td>
       <td style="font-size:13px;">${name}</td>
       ${fmtCell}

@@ -1605,6 +1605,7 @@ select option { background: var(--surface2); color: var(--text); }
   flex-wrap: wrap; gap: 6px; justify-content: center;
   width: 100%; max-width: 360px; margin: 8px 0 12px;
 }
+.voice-heard { font-size: 12px; color: var(--text3); min-height: 16px; margin-top: 4px; text-align: center; max-width: 340px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .voice-burst-empty { font-size: 12px; color: var(--text3); text-align: center; }
 .voice-burst-chip {
   display: inline-flex; align-items: center; gap: 6px;
@@ -2027,6 +2028,7 @@ code { background: var(--surface2); }
       <div class="voice-status" id="voice-status">Appuyez sur le micro pour dicter le dossard</div>
 
       <!-- Fil des dossards dictés en rafale (toucher pour annuler / forcer) -->
+      <div class="voice-heard" id="voice-heard"></div>
       <div class="voice-burst-log" id="voice-burst-log" style="display:none;">
         <div class="voice-burst-empty">Les dossards dictés s'afficheront ici — touchez-en un pour l'annuler.</div>
       </div>
@@ -4808,7 +4810,10 @@ let voiceContinuousMode = false;
 
 // ── Dictée en rafale ──────────────────────────────
 const VOICE_BURST = { dedupeMs: 20000, vibrate: true, beep: true };
-let voiceCommitted = {};   // index de résultat -> nb de dossards déjà enregistrés
+let voiceCommitted = {};   // index de résultat -> [{raw, byTimeout, items:[{bib,res,chip}]}]
+let voicePendingTimer = null;
+let voicePendingFlush = null;   // fonction qui valide le numéro en attente
+const VOICE_STABLE_MS = 700;    // un numéro inchangé pendant 0,7 s est validé sans attendre Chrome
 let voiceFirstSeen = {};   // index de résultat -> [horodatage de 1ère écoute de chaque numéro]
 let voiceLastSeen = new Map(); // "bib|cp" -> ts
 let voiceAudioCtx = null;
@@ -4856,10 +4861,22 @@ function fixWithStartList(items, known) {
   const res = [];
   for (let i = 0; i < items.length; i++) {
     const n = items[i].bib, next = items[i + 1] && items[i + 1].bib;
+    // Chiffre par chiffre : "sept cinq neuf" -> 759
+    let merged = false;
+    for (let len = Math.min(4, items.length - i); len >= 2; len--) {
+      const run = items.slice(i, i + len);
+      if (run.every(x => x.bib.length === 1)) {
+        const joined = run.map(x => x.bib).join('');
+        if (known.has(joined)) { res.push({ bib: joined, ts: items[i].ts, known: true }); i += len - 1; merged = true; break; }
+      }
+    }
+    if (merged) continue;
+    // "1 200" -> 1200
     if (next && next.length === 3 && n.length <= 2 && known.has(n + next) && !(known.has(n) && known.has(next))) {
       res.push({ bib: n + next, ts: items[i].ts, known: true }); i++; continue;
     }
     if (known.has(n)) { res.push({ ...items[i], known: true }); continue; }
+    // "759868" -> 759 + 868
     let split = null;
     for (let k = 1; k < n.length; k++) {
       const a = n.slice(0, k), b = n.slice(k);
@@ -4875,18 +4892,42 @@ function voiceBurstCommit(bib, ts, known) {
   if (!selectedCp) {
     stopVoiceListening();
     showConfirm("Sélectionnez d'abord un point de passage.", true);
-    return;
+    return null;
   }
-  const key = bib + '|' + selectedCp;
+  const n = parseInt(bib, 10);
+  if (!n || n <= 0 || n > 99999) return null;
+  const key = n + '|' + selectedCp;
   const last = voiceLastSeen.get(key);
-  if (last && ts - last < VOICE_BURST.dedupeMs) return;   // doublon (répétition / relance du micro)
+  if (last && Math.abs(ts - last) < VOICE_BURST.dedupeMs) return null;   // doublon
   voiceLastSeen.set(key, ts);
-  if (!known) { addBurstChip(bib, ts, null, 'unknown'); voiceFeedback(false); return; }
-  const res = savePassage(parseInt(bib, 10), ts);
-  if (!res) return;
-  addBurstChip(bib, ts, res, 'ok');
-  voiceFeedback(true);
-  setVoiceStatus(`Dossard ${bib} enregistré — continuez…`, 'listening');
+  const res = savePassage(n, ts);
+  if (!res) return null;
+  const chip = addBurstChip(String(n), ts, res, known ? 'ok' : 'unknown');
+  voiceFeedback(known);
+  setVoiceStatus(known ? `Dossard ${n} enregistré — continuez…` : `Dossard ${n} enregistré (non inscrit) — continuez…`, 'listening');
+  return { bib: String(n), res, chip };
+}
+
+function undoBurstPassage(bib, res, chip, silent) {
+  if (state.passages[bib]) {
+    if (res.prev) state.passages[bib][res.cpId] = res.prev;
+    else {
+      delete state.passages[bib][res.cpId];
+      if (!Object.keys(state.passages[bib]).length) delete state.passages[bib];
+    }
+  }
+  const idx = recentBibs.findIndex(r => String(r.bib) === String(bib) && r.time === res.timeStr);
+  if (idx >= 0) recentBibs.splice(idx, 1);
+  voiceLastSeen.delete(bib + '|' + res.cpId);
+  saveState(); renderRecentBibs(); renderRanking(); updateStats(); renderPassagesList();
+  if (chip) {
+    if (silent) chip.remove();
+    else {
+      chip.className = 'voice-burst-chip cancelled'; chip.disabled = true;
+      chip.querySelector('span').textContent = 'annulé';
+    }
+  }
+  if (!silent) showConfirm(`Passage du dossard ${bib} annulé.`, true);
 }
 
 function voiceFeedback(ok) {
@@ -4903,43 +4944,41 @@ function voiceFeedback(ok) {
 
 function addBurstChip(bib, ts, res, stateCls) {
   const log = document.getElementById('voice-burst-log');
-  if (!log) return;
+  if (!log) return null;
   const hint = log.querySelector('.voice-burst-empty'); if (hint) hint.remove();
   const chip = document.createElement('button');
   chip.type = 'button';
   chip.className = 'voice-burst-chip ' + stateCls;
   const name = getRunnerName(parseInt(bib, 10));
-  chip.title = stateCls === 'ok'
-    ? `${name ? name + ' — ' : ''}${new Date(ts).toTimeString().slice(0,8)} · toucher pour annuler`
-    : 'Dossard non inscrit — toucher pour l\'enregistrer quand même';
-  chip.innerHTML = `<strong>${bib}</strong><span>${stateCls === 'ok' ? '✕' : '+'}</span>`;
-  chip.onclick = () => {
-    if (chip.classList.contains('ok')) {
-      // Annuler : restaure le passage précédent éventuel
-      if (state.passages[bib]) {
-        if (res.prev) state.passages[bib][res.cpId] = res.prev;
-        else {
-          delete state.passages[bib][res.cpId];
-          if (!Object.keys(state.passages[bib]).length) delete state.passages[bib];
-        }
-      }
-      const idx = recentBibs.findIndex(r => String(r.bib) === String(bib) && r.time === res.timeStr);
-      if (idx >= 0) recentBibs.splice(idx, 1);
-      voiceLastSeen.delete(bib + '|' + res.cpId);
-      saveState(); renderRecentBibs(); renderRanking(); updateStats(); renderPassagesList();
-      showConfirm(`Passage du dossard ${bib} annulé.`, true);
-      chip.classList.replace('ok', 'cancelled'); chip.disabled = true;
-      chip.querySelector('span').textContent = 'annulé';
-    } else if (chip.classList.contains('unknown')) {
-      res = savePassage(parseInt(bib, 10), ts);
-      if (!res) return;
-      voiceFeedback(true);
-      chip.classList.replace('unknown', 'ok');
-      chip.querySelector('span').textContent = '✕';
-    }
-  };
+  chip.title = `${name ? name + ' — ' : (stateCls === 'unknown' ? 'Non inscrit — ' : '')}${new Date(ts).toTimeString().slice(0,8)} · toucher pour annuler`;
+  chip.innerHTML = `<strong>${bib}</strong><span>${stateCls === 'unknown' ? '? ✕' : '✕'}</span>`;
+  chip.onclick = () => { if (!chip.disabled) undoBurstPassage(bib, res, chip, false); };
   log.prepend(chip);
   while (log.children.length > 16) log.lastChild.remove();
+  return chip;
+}
+
+function showVoiceHeard(txt) {
+  const el = document.getElementById('voice-heard');
+  if (el) el.textContent = txt ? `Entendu : « ${txt.trim()} »` : '';
+}
+
+// Valide les numéros [from, to) du résultat i
+function voiceCommitRange(i, nums, seen, from, to, byTimeout) {
+  const done = voiceCommitted[i] || (voiceCommitted[i] = []);
+  const known = getKnownBibs();
+  const items = nums.slice(from, to).map((bib, k) => ({ bib, ts: seen[from + k] || Date.now() }));
+  const fixed = fixWithStartList(items, known);
+  const committed = fixed.map(x => voiceBurstCommit(x.bib, x.ts, x.known)).filter(Boolean);
+  for (let k = from; k < to; k++) {
+    done[k] = { raw: nums[k], byTimeout, items: k === from ? committed : [] };
+  }
+}
+
+function voiceFlushPending() {
+  clearTimeout(voicePendingTimer); voicePendingTimer = null;
+  const f = voicePendingFlush; voicePendingFlush = null;
+  if (f) f();
 }
 
 function initVoice() {
@@ -4992,20 +5031,39 @@ function initVoice() {
     }
 
     // Mode rafale
-    const known = getKnownBibs();
     const now = Date.now();
     for (let i = e.resultIndex; i < e.results.length; i++) {
       const r = e.results[i];
-      const nums = extractNumbers(r[0].transcript);
+      const txt = r[0].transcript;
+      showVoiceHeard(txt);
+      const nums = extractNumbers(txt);
       const seen = voiceFirstSeen[i] || (voiceFirstSeen[i] = []);
-      for (let k = seen.length; k < nums.length; k++) seen[k] = now;   // heure où le numéro a été entendu
-      // En intermédiaire, le dernier numéro peut encore évoluer ("sept cent" -> "sept cent cinquante-neuf")
+      for (let k = seen.length; k < nums.length; k++) seen[k] = now;
+      const done = voiceCommitted[i] || (voiceCommitted[i] = []);
+
+      // Un numéro validé "par délai" a été complété ensuite ("700" -> "759") : on corrige
+      for (let k = 0; k < done.length; k++) {
+        if (done[k] && done[k].byTimeout && nums[k] !== undefined && nums[k] !== done[k].raw) {
+          done[k].items.forEach(x => undoBurstPassage(x.bib, x.res, x.chip, true));
+          done.length = k;
+          seen.length = Math.min(seen.length, k + 1);
+          break;
+        }
+      }
+
+      // Tous les numéros suivis d'un autre sont sûrs ; au final, tous le sont
       const stableCount = r.isFinal ? nums.length : Math.max(0, nums.length - 1);
-      const done = voiceCommitted[i] || 0;
-      if (stableCount > done) {
-        const items = nums.slice(done, stableCount).map((bib, k) => ({ bib, ts: seen[done + k] || now }));
-        fixWithStartList(items, known).forEach(x => voiceBurstCommit(x.bib, x.ts, x.known));
-        voiceCommitted[i] = stableCount;
+      if (stableCount > done.length) voiceCommitRange(i, nums, seen, done.length, stableCount, false);
+
+      // Le dernier numéro : validé s'il ne bouge plus pendant 0,7 s (certains téléphones n'envoient jamais de résultat "final")
+      clearTimeout(voicePendingTimer); voicePendingTimer = null; voicePendingFlush = null;
+      if (!r.isFinal && nums.length > done.length) {
+        const from = done.length, to = nums.length, snap = nums.slice();
+        voicePendingFlush = () => {
+          const d = voiceCommitted[i] || [];
+          if (d.length === from) voiceCommitRange(i, snap, seen, from, to, true);
+        };
+        voicePendingTimer = setTimeout(voiceFlushPending, VOICE_STABLE_MS);
       }
     }
   };
@@ -5027,6 +5085,7 @@ function initVoice() {
   };
 
   voiceRecognition.onend = () => {
+    voiceFlushPending();   // ne pas perdre le dernier numéro dicté avant la coupure
     voiceCommitted = {}; voiceFirstSeen = {};
     if (voiceListening && voiceContinuousMode) {
       try { voiceRecognition.start(); } catch(e) {}   // relance immédiate et transparente
@@ -5136,6 +5195,7 @@ function toggleVoice() {
 }
 
 function stopVoiceListening() {
+  if (voiceContinuousMode) voiceFlushPending();
   voiceListening = false;
   try { if (voiceRecognition) voiceRecognition.stop(); } catch(e){}
   setVoiceState('idle');

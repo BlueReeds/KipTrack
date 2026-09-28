@@ -1536,6 +1536,8 @@ select option { background: var(--surface2); color: var(--text); }
   position: relative;
 }
 .voice-btn:hover { border-color: var(--primary); color: var(--primary); background: var(--primary-dim); }
+.voice-btn.resume { border-color: var(--warning); color: var(--warning); animation: voiceResume 1.2s ease-in-out infinite; }
+@keyframes voiceResume { 0%,100% { box-shadow: 0 0 0 0 rgba(255,159,10,.5); } 50% { box-shadow: 0 0 0 10px rgba(255,159,10,0); } }
 .voice-btn.listening {
   border-color: var(--error); color: var(--error);
   background: var(--error-dim);
@@ -4817,6 +4819,34 @@ const VOICE_STABLE_MS = 700;    // un numéro inchangé pendant 0,7 s est valid�
 let voiceFirstSeen = {};   // index de résultat -> [horodatage de 1ère écoute de chaque numéro]
 let voiceLastSeen = new Map(); // "bib|cp" -> ts
 let voiceAudioCtx = null;
+const VOICE_IS_IOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+let voiceAutoRestart = false;     // la session en cours a été relancée automatiquement (pas par un appui)
+let voiceRestartTimes = [];       // horodatages des relances automatiques récentes
+let voiceGotResult = false;
+let voiceWakeLock = null;
+
+// Garde l'écran allumé pendant la rafale (une mise en veille coupe le micro)
+async function voiceKeepAwake(on) {
+  try {
+    if (on && 'wakeLock' in navigator && !voiceWakeLock) {
+      voiceWakeLock = await navigator.wakeLock.request('screen');
+      voiceWakeLock.addEventListener('release', () => { voiceWakeLock = null; });
+    } else if (!on && voiceWakeLock) { await voiceWakeLock.release(); voiceWakeLock = null; }
+  } catch (e) {}
+}
+
+// Le téléphone a coupé le micro et refuse la relance automatique : on demande un appui
+function voiceAskForTap(msg) {
+  voiceFlushPending();
+  voiceListening = false;
+  voiceAutoRestart = false;
+  try { voiceRecognition.abort(); } catch(e) {}
+  setVoiceState('idle');
+  const btn = document.getElementById('voice-btn');
+  if (btn) btn.classList.add('resume');
+  setVoiceStatus(msg || 'Micro interrompu par le téléphone — touchez le micro pour reprendre', 'listening');
+  if (navigator.vibrate) navigator.vibrate([80, 80, 80]);
+}
 
 function getKnownBibs() {
   return new Set(Object.keys(state.runners || {}).map(String));
@@ -4932,7 +4962,7 @@ function undoBurstPassage(bib, res, chip, silent) {
 
 function voiceFeedback(ok) {
   if (VOICE_BURST.vibrate && navigator.vibrate) navigator.vibrate(ok ? 40 : [40, 60, 40]);
-  if (VOICE_BURST.beep && voiceAudioCtx) {
+  if (VOICE_BURST.beep && voiceAudioCtx && !VOICE_IS_IOS) {
     try {
       const o = voiceAudioCtx.createOscillator(), g = voiceAudioCtx.createGain();
       o.frequency.value = ok ? 1400 : 500; g.gain.value = 0.08;
@@ -5002,7 +5032,10 @@ function initVoice() {
 
   voiceRecognition.onstart = () => {
     voiceListening = true;
+    voiceGotResult = false;
     voiceCommitted = {}; voiceFirstSeen = {};
+    const rb = document.getElementById('voice-btn'); if (rb) rb.classList.remove('resume');
+    if (voiceContinuousMode) voiceKeepAwake(true);
     setVoiceState('listening');
     if (voiceContinuousMode) setVoiceStatus('Mode rafale — dictez les dossards à la suite', 'listening');
   };
@@ -5031,6 +5064,7 @@ function initVoice() {
     }
 
     // Mode rafale
+    voiceGotResult = true;
     const now = Date.now();
     for (let i = e.resultIndex; i < e.results.length; i++) {
       const r = e.results[i];
@@ -5076,9 +5110,21 @@ function initVoice() {
       }
       return;   // en rafale : normal, onend relance
     }
+    if (e.error === 'service-not-allowed' || e.error === 'audio-capture') {
+      if (voiceContinuousMode && voiceAutoRestart) {
+        // Relance automatique refusée par le téléphone : on attend un appui
+        voiceAskForTap();
+      } else {
+        stopVoiceListening();
+        setVoiceStatus(VOICE_IS_IOS
+          ? 'Dictée bloquée par l\'iPhone — activez Réglages › Général › Clavier › Dictée, puis réessayez'
+          : 'Reconnaissance vocale bloquée — ouvrez la page dans Chrome (pas depuis une autre appli), puis réessayez', 'listening');
+      }
+      return;
+    }
     const msgs = {
       'not-allowed': 'Micro refusé — autorisez l\'accès dans le navigateur',
-      'network': 'Pas de réseau — la dictée Chrome nécessite Internet. Utilisez le clavier.',
+      'network': 'Pas de réseau — la dictée nécessite Internet. Utilisez le clavier.',
     };
     stopVoiceListening();
     setVoiceStatus(msgs[e.error] || `Erreur : ${e.error}`, 'listening');
@@ -5088,7 +5134,16 @@ function initVoice() {
     voiceFlushPending();   // ne pas perdre le dernier numéro dicté avant la coupure
     voiceCommitted = {}; voiceFirstSeen = {};
     if (voiceListening && voiceContinuousMode) {
-      try { voiceRecognition.start(); } catch(e) {}   // relance immédiate et transparente
+      // Relances trop fréquentes sans rien reconnaître = le téléphone bloque : on demande un appui
+      const now = Date.now();
+      voiceRestartTimes = voiceRestartTimes.filter(t => now - t < 10000);
+      if (!voiceGotResult && voiceRestartTimes.length >= 4) { voiceAskForTap(); return; }
+      voiceRestartTimes.push(now);
+      voiceAutoRestart = true;
+      setTimeout(() => {
+        if (!voiceListening) return;
+        try { voiceRecognition.start(); } catch(e) { voiceAskForTap(); }
+      }, 250);
     } else if (voiceListening) {
       stopVoiceListening();
     }
@@ -5178,7 +5233,8 @@ function toggleVoice() {
   }
   if (!voiceRecognition) { initVoice(); }
   if (!voiceRecognition) return;
-  if (!voiceAudioCtx) { try { voiceAudioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch(e) {} }
+  voiceAutoRestart = false; voiceRestartTimes = [];
+  if (!voiceAudioCtx && !VOICE_IS_IOS) { try { voiceAudioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch(e) {} }
   if (voiceAudioCtx && voiceAudioCtx.state === 'suspended') voiceAudioCtx.resume();
 
   // Hide preview if shown
@@ -5197,6 +5253,8 @@ function toggleVoice() {
 function stopVoiceListening() {
   if (voiceContinuousMode) voiceFlushPending();
   voiceListening = false;
+  voiceAutoRestart = false;
+  voiceKeepAwake(false);
   try { if (voiceRecognition) voiceRecognition.stop(); } catch(e){}
   setVoiceState('idle');
 }

@@ -2850,7 +2850,12 @@ function showScreen(name) {
   document.getElementById('screen-app').style.display = name === 'app' ? 'block' : 'none';
 }
 
-async function startApp() { await detectSecureMode(); showScreen('login'); setRole(loginRole); loadStateFromDB(); }
+let secureDetect = Promise.resolve();
+function startApp() {
+  showScreen('login'); setRole(loginRole);
+  secureDetect = detectSecureMode().then(() => { setRole(loginRole); loadStateFromDB(); });
+  return secureDetect;
+}
 
 // ═══════════════════════════════════════════════
 // DATABASE
@@ -2960,15 +2965,29 @@ let secureUnsubs = { pub: null, staff: null, adm: null };
 let secureLastSynced = {};   // chemin -> JSON tel que présent sur le serveur
 let secureLoaded = { pub: false, staff: false, adm: false };
 
+function isPermissionDenied(e) { return /permission[_ ]denied/i.test(((e && (e.code || '')) + ' ' + ((e && e.message) || ''))); }
+function onceWithTimeout(path, ms) {
+  return Promise.race([
+    db.ref(path).once('value'),
+    new Promise((_, rej) => setTimeout(() => rej(Object.assign(new Error('timeout'), { code: 'timeout' })), ms))
+  ]);
+}
 async function detectSecureMode() {
-  secureDb = false;
-  if (useLocal || !db) return;
+  if (useLocal || !db) { secureDb = false; return; }
+  let cached = null; try { cached = localStorage.getItem('kt_secure_mode'); } catch (e) {}
+  const remember = v => { secureDb = v; try { localStorage.setItem('kt_secure_mode', v ? '1' : '0'); } catch (e) {} };
   try {
-    const s = await db.ref('public/meta').once('value');
-    if (s.exists()) { secureDb = true; return; }
-  } catch (e) { secureDb = true; return; }
-  try { await db.ref('race').once('value'); secureDb = false; }   // lisible par tous = base encore ouverte
-  catch (e) { secureDb = true; }                                  // refusé = règles sécurisées en place
+    const s = await onceWithTimeout('public/meta', 6000);
+    if (s.exists()) { remember(true); return; }
+  } catch (e) {
+    if (isPermissionDenied(e)) { remember(true); return; }
+    secureDb = cached === '1'; return;   // réseau lent ou erreur : on garde le dernier mode connu (ancien fonctionnement par défaut)
+  }
+  try { await onceWithTimeout('race', 6000); remember(false); }
+  catch (e) {
+    if (isPermissionDenied(e)) remember(true);
+    else secureDb = cached === '1';
+  }
 }
 
 // Normalise une valeur comme Firebase la stocke (null/undefined supprimés)
@@ -3426,12 +3445,17 @@ function setRole(role) {
   document.getElementById('login-error').style.color = '';
   document.getElementById('login-input').value = '';
   document.getElementById('login-reset').style.display = 'none';
-  document.getElementById('login-reset-row').style.display = (role === 'spectateur' || secureDb) ? 'none' : 'block';
-  if (secureDb && role !== 'spectateur') document.getElementById('login-hint').textContent += " Code oublié : l'organisateur peut le réinitialiser dans la console Firebase.";
+  document.getElementById('login-reset-row').style.display = (role === 'spectateur') ? 'none' : 'block';
 }
 
 async function doLogin() {
   const pwd = (document.getElementById('login-input').value||'').trim();
+  const le0 = document.getElementById('login-error');
+  let waiting = true;
+  setTimeout(() => { if (waiting) { le0.style.color = 'var(--text3)'; le0.textContent = 'Connexion à la base de données…'; } }, 300);
+  await secureDetect;
+  waiting = false;
+  if (le0.textContent === 'Connexion à la base de données…') { le0.style.color = ''; le0.textContent = ''; }
   if (loginRole==='spectateur') { if (secureDb) await secureSignOut(); enterApp('spectateur'); return; }
   const role = loginRole; // 'benevole' (pointage) or 'admin'
   if (!useLocal && secureDb) { await secureLogin(role, pwd); return; }
@@ -3454,7 +3478,7 @@ async function doLogin() {
     }
   }
   document.getElementById('login-error').textContent = 'Code incorrect.';
-  document.getElementById('login-reset-row').style.display = secureDb ? 'none' : 'block';
+  document.getElementById('login-reset-row').style.display = 'block';
 }
 
 // ═══════════════════════════════════════════════
@@ -3472,7 +3496,19 @@ function fbProjectId() {
 }
 
 function openCodeReset() {
-  if (secureDb) return;
+  const resetBtn = document.querySelector('.login-reset-actions .btn-danger');
+  if (resetBtn) resetBtn.style.display = secureDb ? 'none' : '';
+  if (secureDb) {
+    const who = loginRole === 'admin' ? STAFF_EMAILS.admin : STAFF_EMAILS.benevole;
+    document.getElementById('login-reset-body').innerHTML =
+      "Cette base est sécurisée : les codes sont gérés par Firebase et ne peuvent pas être réinitialisés depuis l'application.<br><br>" +
+      "L'organisateur doit ouvrir la <strong>console Firebase</strong> › Authentication › Utilisateurs, cliquer sur ⋮ à côté de <code>" + who + "</code> puis « Réinitialiser le mot de passe ».";
+    document.getElementById('login-reset-proof-block').style.display = 'none';
+    document.getElementById('login-reset-error').textContent = '';
+    document.getElementById('login-reset').style.display = 'block';
+    document.getElementById('login-reset-row').style.display = 'none';
+    return;
+  }
   const proof = fbProjectId();
   const block = document.getElementById('login-reset-proof-block');
   document.getElementById('login-reset-body').textContent = proof
@@ -3492,6 +3528,7 @@ function closeCodeReset() {
 }
 
 function confirmCodeReset() {
+  if (secureDb) return;
   const expected = fbProjectId();
   const err = document.getElementById('login-reset-error');
   if (expected) {

@@ -2255,6 +2255,7 @@ code { background: var(--surface2); }
       </div>
       <div class="vol-card" id="mission-unlock-card">
         <div class="section-title" style="margin-top:0;">Accéder à une mission confidentielle</div>
+        <div id="mission-unlock-admin-hint" class="legal-warning" style="display:none;">Certaines missions confidentielles ont été créées sous un ancien code admin. Saisissez leur code une fois : elles seront ensuite rattachées à votre code admin actuel.</div>
         <div class="mission-unlock-row">
           <input class="form-input" id="mission-unlock-code" type="text" autocomplete="off" placeholder="Code reçu de l'organisation" onkeydown="if(event.key==='Enter')unlockMissionWithCode()">
           <button class="btn" onclick="unlockMissionWithCode()">Débloquer</button>
@@ -6242,6 +6243,7 @@ const MISSION_FILE_MAX = 5 * 1024 * 1024;        // 5 Mo par fiche
 const MISSION_FILE_MAX_LOCAL = 1.5 * 1024 * 1024; // mode local : stockage du navigateur limité
 
 let missionKeys = {};          // missionId -> CryptoKey (missions déverrouillées)
+let missionRaw = {};           // missionId -> clé brute (mémoire uniquement, effacée à la déconnexion)
 let missionPlain = {};         // missionId -> {name, description, location, start, end}
 let missionPlainSig = {};      // missionId -> empreinte du contenu chiffré déjà déchiffré
 let missionAdminSecret = null; // code admin saisi à la connexion (mémoire uniquement)
@@ -6316,7 +6318,7 @@ function storeMissionCode(id, code) {
 }
 function clearMissionSession() {
   try { Object.keys(sessionStorage).filter(k => k.startsWith('kt_mission_codes_')).forEach(k => sessionStorage.removeItem(k)); } catch (e) {}
-  missionKeys = {}; missionPlain = {}; missionPlainSig = {}; missionDecryptedComments = {};
+  missionKeys = {}; missionRaw = {}; missionPlain = {}; missionPlainSig = {}; missionDecryptedComments = {};
   if (typeof missionFileMetaCache !== 'undefined') missionFileMetaCache.clear();
 }
 function forgetMissionCodes() {
@@ -6364,32 +6366,45 @@ async function getMissionKey(id) {
 
 // Tente de déverrouiller les missions confidentielles (codes mémorisés, code admin)
 let missionRefreshRunning = null;
+// L'admin accède aux missions confidentielles avec SON code : si une mission a été créée
+// sous un ancien code admin (ou sans code), elle est rattachée au code actuel dès qu'il l'a ouverte.
+async function syncAdminWrap(id) {
+  const m = (state.missions || {})[id];
+  if (!m || !m.hidden || !isMissionAdmin() || !missionRaw[id]) return false;
+  if (missionAdminSecret) {
+    if (await unwrapRaw(m.wrapAdmin, missionAdminSecret)) return false;
+    m.wrapAdmin = await wrapRaw(missionRaw[id], missionAdminSecret);
+    return true;
+  }
+  if (m.wrapAdmin) { delete m.wrapAdmin; return true; }   // code admin vide : pas de protection factice
+  return false;
+}
 async function refreshMissionKeys() {
-  if (missionRefreshRunning) return missionRefreshRunning;
+  // Une vérification est déjà en cours (peut-être lancée avant une déconnexion) : on en relance une après elle
+  if (missionRefreshRunning) return missionRefreshRunning.then(() => refreshMissionKeys());
   missionRefreshRunning = (async () => {
-    let changed = false;
+    let changed = false, needSave = false;
     const missions = state.missions || {};
     const codes = getStoredMissionCodes();
     for (const [id, m] of Object.entries(missions)) {
       if (!m.hidden) continue;
       if (!missionKeys[id]) {
-        let raw = null, viaCode = false;
-        if (codes[id]) { raw = await unwrapRaw(m.wrapCode, codes[id]); viaCode = !!raw; }
-        if (!raw && missionAdminSecret !== null) raw = await unwrapRaw(m.wrapAdmin, missionAdminSecret);
+        let raw = null;
+        if (codes[id]) raw = await unwrapRaw(m.wrapCode, codes[id]);
+        if (!raw && missionAdminSecret) raw = await unwrapRaw(m.wrapAdmin, missionAdminSecret);
+        if (!raw && missionAdminSecret !== null && m.wrapAdmin) raw = await unwrapRaw(m.wrapAdmin, '');   // anciennes missions créées sans code admin
         if (!raw) continue;
+        missionRaw[id] = raw;
         missionKeys[id] = await importMissionKey(raw);
-        // Auto-réparation : l'admin a la clé mais son accès admin est périmé (code admin changé)
-        if (viaCode && isMissionAdmin() && missionAdminSecret !== null && !(await unwrapRaw(m.wrapAdmin, missionAdminSecret))) {
-          m.wrapAdmin = await wrapRaw(raw, missionAdminSecret); saveState();
-        }
       }
+      if (await syncAdminWrap(id)) needSave = true;
       if (m.enc && missionPlainSig[id] !== m.enc.ct) {
         try { missionPlain[id] = await decJSON(missionKeys[id], m.enc); missionPlainSig[id] = m.enc.ct; changed = true; }
-        catch (e) { delete missionKeys[id]; delete missionPlain[id]; }
+        catch (e) { delete missionKeys[id]; delete missionRaw[id]; delete missionPlain[id]; }
       }
     }
-    // Missions supprimées
-    for (const id of Object.keys(missionPlain)) if (!missions[id]) { delete missionPlain[id]; delete missionKeys[id]; changed = true; }
+    for (const id of Object.keys(missionPlain)) if (!missions[id]) { delete missionPlain[id]; delete missionKeys[id]; delete missionRaw[id]; changed = true; }
+    if (needSave) saveState();
     return changed;
   })();
   try { return await missionRefreshRunning; } finally { missionRefreshRunning = null; }
@@ -6406,6 +6421,7 @@ async function unlockMissionWithCode() {
     if (!m.hidden || missionPlain[id]) continue;
     const raw = await unwrapRaw(m.wrapCode, code);
     if (!raw) continue;
+    missionRaw[id] = raw;
     missionKeys[id] = await importMissionKey(raw);
     storeMissionCode(id, code);
     found.push(id);
@@ -6491,10 +6507,10 @@ async function buildHiddenMission(fields, code, raw) {
   const m = {
     hidden: true, needed: fields.needed,
     enc: await encJSON(key, plain),
-    wrapCode: await wrapRaw(raw, code),
-    wrapAdmin: await wrapRaw(raw, missionAdminSecret == null ? '' : missionAdminSecret)
+    wrapCode: await wrapRaw(raw, code)
   };
-  return { m, key, plain };
+  if (missionAdminSecret) m.wrapAdmin = await wrapRaw(raw, missionAdminSecret);
+  return { m, key, plain, raw };
 }
 
 async function addMission() {
@@ -6508,9 +6524,10 @@ async function addMission() {
   const id = genId('mis');
   if (f.hidden) {
     msg.style.color = 'var(--text3)'; msg.textContent = 'Chiffrement…';
-    const { m, key, plain } = await buildHiddenMission(f, f.code);
+    const { m, key, plain, raw } = await buildHiddenMission(f, f.code);
     m.createdAt = new Date().toISOString();
     state.missions[id] = m;
+    missionRaw[id] = raw;
     missionKeys[id] = key; missionPlain[id] = plain; missionPlainSig[id] = m.enc.ct;
   } else {
     state.missions[id] = { name: f.name, needed: f.needed, start: f.start, end: f.end, location: f.location, description: f.description, createdAt: new Date().toISOString() };
@@ -6547,7 +6564,7 @@ async function saveMissionEdit() {
       if (f.code.length < 4) return fail('Indiquez un code confidentiel (4 caractères minimum).');
       const built = await buildHiddenMission({ ...f }, f.code);
       Object.assign(m, built.m); delete m.name; delete m.description; delete m.location; delete m.start; delete m.end;
-      missionKeys[id] = built.key; missionPlain[id] = built.plain; missionPlainSig[id] = m.enc.ct;
+      missionKeys[id] = built.key; missionRaw[id] = built.raw; missionPlain[id] = built.plain; missionPlainSig[id] = m.enc.ct;
     } else {
       m.needed = f.needed;
       m.enc = await encJSON(key, plain);
@@ -6580,6 +6597,7 @@ async function saveMissionEdit() {
 async function findRawKey(id) {
   const m = state.missions[id];
   if (m.openKey && !m.hidden) return b64ToBytes(m.openKey);
+  if (missionRaw[id]) return missionRaw[id];
   const code = getStoredMissionCodes()[id];
   return (code && await unwrapRaw(m.wrapCode, code)) || (missionAdminSecret !== null && await unwrapRaw(m.wrapAdmin, missionAdminSecret)) || null;
 }
@@ -6592,7 +6610,8 @@ async function rewrapMissionsForAdmin(newSecret) {
     if (!m.hidden) continue;
     const raw = await findRawKey(id);
     if (!raw) continue;
-    m.wrapAdmin = await wrapRaw(raw, newSecret); n++;
+    if (newSecret) m.wrapAdmin = await wrapRaw(raw, newSecret); else delete m.wrapAdmin;
+    n++;
   }
   missionAdminSecret = newSecret;
   return n;
@@ -6644,7 +6663,10 @@ function renderMissionList() {
   const forget = document.getElementById('mission-forget-codes');
   if (forget) forget.style.display = Object.keys(codes).length && !isMissionAdmin() ? '' : 'none';
   const unlockCard = document.getElementById('mission-unlock-card');
-  if (unlockCard) unlockCard.style.display = isMissionAdmin() ? 'none' : '';
+  const lockedCount = Object.keys(state.missions || {}).filter(id => state.missions[id].hidden && !missionPlain[id]).length;
+  if (unlockCard) unlockCard.style.display = isMissionAdmin() && !lockedCount ? 'none' : '';
+  const adminHint = document.getElementById('mission-unlock-admin-hint');
+  if (adminHint) adminHint.style.display = isMissionAdmin() && lockedCount ? '' : 'none';
   if (!ids.length) {
     el.innerHTML = '<div class="vol-empty"><div class="vol-empty-icon"></div>Aucune mission pour le moment.</div>';
     return;
@@ -6850,6 +6872,7 @@ async function unlockMissionFromModal() {
   msg.textContent = 'Vérification…'; msg.style.color = 'var(--text3)';
   const raw = await unwrapRaw(m.wrapCode, (input.value || '').trim());
   if (!raw) { msg.textContent = 'Code incorrect.'; msg.style.color = 'var(--error)'; return; }
+  missionRaw[id] = raw;
   missionKeys[id] = await importMissionKey(raw);
   storeMissionCode(id, input.value.trim());
   input.value = ''; msg.textContent = '';

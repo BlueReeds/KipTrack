@@ -1129,6 +1129,87 @@ select option { background: var(--surface2); color: var(--text); }
 .empty-state { text-align: center; padding: 52px 20px; color: var(--text3); }
 .empty-icon { font-size: 48px; margin-bottom: 14px; opacity: 0.25; }
 
+/* ── MISSIONS ── */
+.mission-clickable { cursor: pointer; transition: border-color .12s; }
+.mission-clickable:hover { border-color: var(--primary); }
+.mission-chevron { color: var(--text3); font-size: 18px; }
+.mission-badges { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 4px; }
+.mission-badges:empty { display: none; }
+.mission-badge { font-size: 10.5px; font-weight: 600; padding: 2px 7px; border-radius: 999px; background: var(--surface3); color: var(--text2); white-space: nowrap; }
+.mission-badge.secret { background: rgba(139,92,246,.16); color: #A78BFA; }
+.mission-secret-toggle { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text2); margin-top: 10px; cursor: pointer; }
+.mission-secret-toggle + div .form-input, #mission-code-wrap .form-input { margin-top: 8px; }
+.mission-unlock-row { display: flex; gap: 8px; }
+.mission-unlock-row .form-input { flex: 1; }
+.mission-forget { display: inline-block; font-size: 11.5px; color: var(--text3); margin-top: 8px; cursor: pointer; text-decoration: underline; }
+.mm-msg { font-size: 12.5px; margin-top: 6px; min-height: 16px; }
+.mission-status { display: inline-block; font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 999px; white-space: nowrap; }
+.mission-status.empty { background: var(--error-dim, rgba(255,69,58,.14)); color: var(--error); }
+.mission-status.short { background: var(--warning-dim, rgba(255,159,10,.14)); color: var(--warning); }
+.mission-status.confirm { background: rgba(10,132,255,.14); color: var(--info); }
+.mission-status.ready { background: var(--success-dim); color: var(--success); }
+.mission-status.onsite { background: var(--success); color: #fff; }
+.mission-modal { max-width: 620px; }
+.mm-facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; }
+.mm-facts > div { background: var(--surface2); border-radius: 10px; padding: 8px 10px; }
+.mm-facts > div > span { display: block; font-size: 10.5px; text-transform: uppercase; letter-spacing: .4px; color: var(--text3); margin-bottom: 3px; }
+.mm-facts strong { font-size: 13px; color: var(--text); }
+.mm-desc { margin-top: 10px; font-size: 13px; line-height: 1.6; color: var(--text2); white-space: pre-wrap; background: var(--surface2); border-radius: 10px; padding: 10px 12px; }
+.mm-section { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--border2); }
+.mm-section-title { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; color: var(--text3); margin-bottom: 10px; }
+.mm-empty { font-size: 13px; color: var(--text3); }
+.mm-file, .mm-vol { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--border2); }
+.mm-file:last-child, .mm-vol:last-of-type { border-bottom: none; }
+.mm-file-icon { font-size: 20px; }
+.mm-file-name, .mm-vol-name { flex: 1; min-width: 0; font-size: 13px; overflow-wrap: anywhere; }
+.mm-small-btn { padding: 5px 12px; font-size: 12px; }
+.mm-upload-btn { display: inline-block; margin-top: 10px; font-size: 12.5px; cursor: pointer; }
+.mm-pill { font: inherit; font-size: 11.5px; font-weight: 600; padding: 4px 10px; border-radius: 999px; border: 1px solid var(--border); background: var(--surface2); color: var(--text3); cursor: pointer; white-space: nowrap; }
+.mm-pill.on { border-color: var(--success); color: var(--success); background: var(--success-dim); }
+.mm-pill.off { border-color: var(--error); color: var(--error); }
+.mm-pill:disabled { cursor: default; }
+.mm-assign { display: flex; gap: 8px; margin-top: 10px; }
+.mm-assign .form-input { flex: 1; }
+.mm-comments { max-height: 300px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
+.mm-comment { background: var(--surface2); border-radius: 12px; padding: 8px 12px; }
+.mm-comment.from-admin { border-left: 3px solid var(--primary); }
+.mm-comment-head { display: flex; align-items: center; gap: 6px; font-size: 12.5px; }
+.mm-comment-head .dash-msub { margin-left: auto; }
+.mm-comment-text { font-size: 13px; line-height: 1.5; color: var(--text2); white-space: pre-wrap; overflow-wrap: anywhere; margin-top: 3px; }
+.mm-comment-del { background: none; border: none; color: var(--text3); cursor: pointer; font-size: 12px; padding: 0 2px; }
+.mm-comment-form { display: grid; grid-template-columns: 1fr; gap: 8px; margin-top: 10px; }
+.mm-comment-form .btn { justify-self: end; }
+.vol-mission-link { color: var(--primary); cursor: pointer; }
+.vol-mission-select { width: auto; max-width: 180px; font-size: 11px; padding: 6px 8px; }
+.dash-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-bottom: 12px; }
+.dash-kpi { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-card); padding: 14px; }
+.dash-kpi-num { font-size: 24px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.dash-kpi-label { font-size: 12px; color: var(--text2); margin-top: 2px; }
+.dash-kpi-sub { font-size: 11px; color: var(--text3); margin-top: 2px; }
+.dash-kpi.good .dash-kpi-num { color: var(--success); }
+.dash-kpi.warn .dash-kpi-num { color: var(--warning); }
+.dash-alert { border-left: 3px solid var(--text3); padding: 8px 12px; margin-bottom: 8px; background: var(--surface2); border-radius: 0 10px 10px 0; }
+.dash-alert.danger { border-color: var(--error); }
+.dash-alert.warn { border-color: var(--warning); }
+.dash-alert.info { border-color: var(--info); }
+.dash-alert-title { font-size: 13px; font-weight: 700; }
+.dash-alert-detail { font-size: 12px; color: var(--text2); margin-top: 3px; line-height: 1.5; }
+.dash-alert-detail a { color: var(--primary); cursor: pointer; }
+.dash-ok { font-size: 13px; color: var(--success); }
+.table-scroll { overflow-x: auto; }
+.dash-table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 640px; }
+.dash-table th { text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: .4px; color: var(--text3); padding: 10px 12px; border-bottom: 1px solid var(--border); }
+.dash-table td { padding: 10px 12px; border-bottom: 1px solid var(--border2); vertical-align: middle; }
+.dash-table tbody tr { cursor: pointer; }
+.dash-table tbody tr:hover td { background: rgba(255,255,255,.025); }
+.dash-table .mono { font-family: monospace; font-size: 12px; }
+.dash-mname { font-weight: 600; }
+.dash-msub { font-size: 11px; color: var(--text3); }
+.dash-frac { font-weight: 700; font-variant-numeric: tabular-nums; }
+.dash-frac.ok { color: var(--success); }
+.dash-frac.bad { color: var(--error); }
+.dash-frac.warn { color: var(--warning); }
+
 /* ── MODAL ── */
 .modal-overlay {
   display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
@@ -2119,25 +2200,48 @@ code { background: var(--surface2); }
     </div>
 
     <div class="vol-sub-tabs">
+      <button class="vol-sub-tab" data-vtab="dashboard" id="vol-tab-dashboard" onclick="switchVolTab('dashboard')" style="display:none;">Tableau de bord</button>
       <button class="vol-sub-tab active" data-vtab="missions" onclick="switchVolTab('missions')">Missions</button>
       <button class="vol-sub-tab" data-vtab="liste" onclick="switchVolTab('liste')">Liste &amp; pointage</button>
       <button class="vol-sub-tab" data-vtab="inscription" onclick="switchVolTab('inscription')">Inscrire un bénévole</button>
     </div>
 
+    <!-- TABLEAU DE BORD (admin) -->
+    <div class="vol-sub-panel" id="vtab-dashboard">
+      <div id="mission-dashboard"></div>
+    </div>
+
     <!-- MISSIONS -->
     <div class="vol-sub-panel active" id="vtab-missions">
-      <div class="vol-card">
+      <div class="vol-card" id="mission-create-card" style="display:none;">
         <div class="section-title" style="margin-top:0;">Créer une mission</div>
         <div class="vol-form-grid">
           <input class="form-input" id="mission-name" type="text" placeholder="Nom (ex: Ravitaillement Km 8)">
           <input class="form-input" id="mission-needed" type="number" min="1" placeholder="Bénévoles nécessaires">
-          <input class="form-input" id="mission-start" type="time">
-          <input class="form-input" id="mission-end" type="time">
+          <input class="form-input" id="mission-start" type="time" title="Début">
+          <input class="form-input" id="mission-end" type="time" title="Fin">
+          <input class="form-input" id="mission-location" type="text" placeholder="Lieu / point de rendez-vous" style="grid-column:1/-1;">
+          <textarea class="form-input" id="mission-description" rows="3" placeholder="Consignes, matériel à prévoir, contact du responsable…" style="grid-column:1/-1;"></textarea>
+        </div>
+        <label class="mission-secret-toggle"><input type="checkbox" id="mission-hidden" onchange="toggleMissionCodeField('mission-')"> Mission confidentielle — visible uniquement avec un code</label>
+        <div id="mission-code-wrap" style="display:none;">
+          <input class="form-input" id="mission-code" type="text" autocomplete="off" placeholder="Code confidentiel à transmettre aux bénévoles concernés (4 caractères min.)">
         </div>
         <button class="btn btn-primary" style="margin-top:10px;" onclick="addMission()">+ Ajouter la mission</button>
+        <div id="mission-create-msg" class="mm-msg"></div>
+        <div class="dash-msub" style="margin-top:6px;">Les fiches de mission s'ajoutent ensuite en ouvrant la mission.</div>
       </div>
       <div class="vol-card">
-        <div class="section-title" style="margin-top:0;">Missions &amp; taux de couverture</div>
+        <div class="section-title" style="margin-top:0;">Accéder à une mission confidentielle</div>
+        <div class="mission-unlock-row">
+          <input class="form-input" id="mission-unlock-code" type="text" autocomplete="off" placeholder="Code reçu de l'organisation" onkeydown="if(event.key==='Enter')unlockMissionWithCode()">
+          <button class="btn" onclick="unlockMissionWithCode()">Débloquer</button>
+        </div>
+        <div id="mission-unlock-msg" class="mm-msg"></div>
+        <a id="mission-forget-codes" class="mission-forget" style="display:none;" onclick="if(confirm('Oublier les codes enregistrés sur cet appareil ?'))forgetMissionCodes()">Oublier les codes enregistrés sur cet appareil</a>
+      </div>
+      <div class="vol-card">
+        <div class="section-title" style="margin-top:0;">Missions</div>
         <div id="mission-list"><div class="vol-empty"><div class="vol-empty-icon"></div>Aucune mission créée.</div></div>
       </div>
     </div>
@@ -2150,6 +2254,8 @@ code { background: var(--surface2); }
           <option value="pending">En attente</option>
           <option value="validated">Validés</option>
           <option value="assigned">Affectés</option>
+          <option value="toconfirm">À confirmer</option>
+          <option value="confirmed">Confirmés</option>
         </select>
         <select class="filter-select" id="vol-filter-mission" onchange="renderVolunteerList()">
           <option value="all">Toutes missions</option>
@@ -2481,6 +2587,51 @@ code { background: var(--surface2); }
   </div>
 </div>
 
+<!-- MODAL MISSION -->
+<div class="modal-overlay" id="mission-modal-overlay" onclick="if(event.target===this)closeMissionModal()">
+  <div class="modal mission-modal">
+    <div class="modal-title">
+      <span id="mm-title">Mission</span>
+      <button class="modal-close" onclick="closeMissionModal()">×</button>
+    </div>
+    <div id="mm-locked" style="display:none;">
+      <p class="mm-empty" style="margin-bottom:10px;">Cette mission est confidentielle. Saisissez son code pour afficher son contenu.</p>
+      <div class="mission-unlock-row">
+        <input class="form-input" id="mm-unlock-code" type="text" autocomplete="off" placeholder="Code de la mission" onkeydown="if(event.key==='Enter')unlockMissionFromModal()">
+        <button class="btn" onclick="unlockMissionFromModal()">Débloquer</button>
+      </div>
+      <div id="mm-unlock-msg" class="mm-msg"></div>
+    </div>
+    <div id="mm-body">
+      <div id="mm-info"></div>
+      <div class="mm-section">
+        <div class="mm-section-title">Fiches de mission</div>
+        <div id="mm-files"></div>
+        <div id="mm-upload" style="display:none;">
+          <label class="btn mm-upload-btn">+ Ajouter une fiche (PDF, image, document)
+            <input type="file" id="mm-file-input" multiple accept=".pdf,image/*,.doc,.docx,.xls,.xlsx,.odt,.ods,.txt,.csv" style="display:none;" onchange="uploadMissionFiles(this.files)">
+          </label>
+        </div>
+        <div id="mm-upload-msg" class="mm-msg"></div>
+      </div>
+      <div class="mm-section">
+        <div class="mm-section-title">Équipe</div>
+        <div id="mm-team"></div>
+      </div>
+      <div class="mm-section">
+        <div class="mm-section-title">Fil de discussion</div>
+        <div id="mm-comments" class="mm-comments"></div>
+        <div class="mm-comment-form">
+          <input class="form-input" id="mm-author" type="text" placeholder="Votre nom" maxlength="60">
+          <textarea class="form-input" id="mm-comment-text" rows="2" maxlength="2000" placeholder="Écrire un message à l'équipe de la mission…"></textarea>
+          <button class="btn btn-primary" onclick="postMissionComment()">Envoyer</button>
+        </div>
+        <div id="mm-comment-msg" class="mm-msg"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL RGPD -->
 <div class="modal-overlay" id="rgpd-modal-overlay" onclick="closeRgpdModal(event)">
   <div class="modal" style="max-width:560px;">
@@ -2721,10 +2872,11 @@ async function doLogin() {
   if (loginRole==='spectateur') { enterApp('spectateur'); return; }
   const role = loginRole; // 'benevole' (pointage) or 'admin'
   const hashes = state.passwordHashes || {};
+  const keepAdminSecret = () => { if (role === 'admin') missionAdminSecret = hashes.admin ? pwd : ''; };
   // No code configured yet for this role → allow access (first-time setup)
-  if (!hashes[role]) { enterApp(role); return; }
+  if (!hashes[role]) { keepAdminSecret(); enterApp(role); return; }
   // Sel stable (actuel)
-  if (await hashCode(pwd, CODE_SALT) === hashes[role]) { enterApp(role); return; }
+  if (await hashCode(pwd, CODE_SALT) === hashes[role]) { keepAdminSecret(); enterApp(role); return; }
   // Repli : anciens codes salés avec le nom de la course (ou le sel par défaut).
   // Le nom de la course pouvait changer après coup, ce qui invalidait le code.
   const legacySalts = [state.raceName, 'apirace', ''];
@@ -2732,6 +2884,7 @@ async function doLogin() {
     if (await hashCode(pwd, salt) === hashes[role]) {
       state.passwordHashes[role] = await hashCode(pwd, CODE_SALT); // ré-encodage
       saveState();
+      keepAdminSecret();
       enterApp(role);
       return;
     }
@@ -2813,12 +2966,16 @@ function enterApp(role) {
   if (demoBadge) demoBadge.style.display = DEMO_MODE ? 'inline-block' : 'none';
   const demoBlock = document.getElementById('demo-block');
   if (demoBlock) demoBlock.style.display = (DEMO_MODE && role==='admin') ? 'block' : 'none';
+  const dashTab = document.getElementById('vol-tab-dashboard');
+  if (dashTab) dashTab.style.display = role === 'admin' ? '' : 'none';
+  if (role === 'benevole' || role === 'admin') startMissionCommentsListener(); else stopMissionCommentsListener();
   applyState();
+  switchVolTab(role === 'admin' ? 'dashboard' : 'missions');
   switchTab('classement');
   maybeShowRgpdBanner();
 }
 
-function doLogout() { currentRole='spectateur'; showScreen('login'); setRole('spectateur'); document.getElementById('login-input').value=''; }
+function doLogout() { closeMissionModal(); stopMissionCommentsListener(); missionAdminSecret = null; missionKeys = {}; missionPlain = {}; missionPlainSig = {}; missionDecryptedComments = {}; missionKdfCache.clear(); currentRole='spectateur'; showScreen('login'); setRole('spectateur'); document.getElementById('login-input').value=''; }
 
 // ═══════════════════════════════════════════════
 // APPLY STATE
@@ -2851,6 +3008,7 @@ function applyState() {
   renderPassagesList(); updatePlistFilters();
   renderMissionList(); renderVolunteerList(); updateVolunteerStats();
   updateVolMissionSelects();
+  refreshMissionKeys().then(changed => { if (changed) { refreshMissionViews(); renderVolunteerList(); } });
   renderCourseSection();
 }
 
@@ -2870,7 +3028,10 @@ async function savePwds() {
   const newAdmin = document.getElementById('pwd-admin').value.trim();
   if (!state.passwordHashes) state.passwordHashes = { benevole: '', admin: '' };
   if (newBenevole) state.passwordHashes.benevole = await hashCode(newBenevole, CODE_SALT);
-  if (newAdmin) state.passwordHashes.admin = await hashCode(newAdmin, CODE_SALT);
+  if (newAdmin) {
+    state.passwordHashes.admin = await hashCode(newAdmin, CODE_SALT);
+    await rewrapMissionsForAdmin(newAdmin);
+  }
   // Make sure no plaintext lingers in the legacy field
   state.passwords = { benevole: '', admin: '' };
   saveState();
@@ -5441,6 +5602,7 @@ function switchVolTab(name) {
   if (panel) panel.classList.add('active');
   if (name === 'liste') renderVolunteerList();
   if (name === 'missions') renderMissionList();
+  if (name === 'dashboard') renderMissionDashboard();
 }
 
 function genId(prefix) {
@@ -5448,69 +5610,823 @@ function genId(prefix) {
 }
 
 // ── MISSIONS ──────────────────────────────────────
-function addMission() {
-  const name = document.getElementById('mission-name').value.trim();
-  const needed = parseInt(document.getElementById('mission-needed').value) || 1;
-  const start = document.getElementById('mission-start').value;
-  const end = document.getElementById('mission-end').value;
-  if (!name) { alert('Indiquez un nom de mission.'); return; }
+// Fiches de mission, fil de commentaires, missions confidentielles (chiffrées),
+// tableau de bord de l'organisation.
+//
+// Missions confidentielles : toutes les données de la course sont lisibles par
+// quiconque connaît l'adresse de la base. Le contenu d'une mission confidentielle
+// (nom, lieu, horaires, description, fiches, commentaires) est donc CHIFFRÉ
+// (AES-GCM 256) avec une clé propre à la mission. Cette clé est elle-même
+// protégée par le code de la mission et, séparément, par le code admin.
+// Sans l'un de ces codes, le contenu est illisible, même en lisant la base.
+
+const MISSION_KDF_ITER = 120000;
+const MISSION_FILE_MAX = 5 * 1024 * 1024;        // 5 Mo par fiche
+const MISSION_FILE_MAX_LOCAL = 1.5 * 1024 * 1024; // mode local : stockage du navigateur limité
+
+let missionKeys = {};          // missionId -> CryptoKey (missions déverrouillées)
+let missionPlain = {};         // missionId -> {name, description, location, start, end}
+let missionPlainSig = {};      // missionId -> empreinte du contenu chiffré déjà déchiffré
+let missionAdminSecret = null; // code admin saisi à la connexion (mémoire uniquement)
+let missionKdfCache = new Map();
+let missionComments = {};      // missionId -> {commentId: item}
+let missionCommentsUnsub = null;
+let missionModalId = null;
+let missionEditing = false;
+let missionDecryptedComments = {}; // commentId -> {author, text}
+
+function esc(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+}
+
+// ── Crypto ────────────────────────────────────────
+const mTe = new TextEncoder(), mTd = new TextDecoder();
+function bytesToB64(bytes) {
+  bytes = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
+  let bin = ''; const CH = 0x8000;
+  for (let i = 0; i < bytes.length; i += CH) bin += String.fromCharCode.apply(null, bytes.subarray(i, i + CH));
+  return btoa(bin);
+}
+function b64ToBytes(b64) {
+  const bin = atob(b64); const out = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+  return out;
+}
+function randB64(n) { return bytesToB64(crypto.getRandomValues(new Uint8Array(n))); }
+
+async function missionKdf(secret, saltB64) {
+  const ck = saltB64 + '|' + secret;
+  if (missionKdfCache.has(ck)) return missionKdfCache.get(ck);
+  const base = await crypto.subtle.importKey('raw', mTe.encode(String(secret)), 'PBKDF2', false, ['deriveKey']);
+  const key = await crypto.subtle.deriveKey(
+    { name: 'PBKDF2', salt: b64ToBytes(saltB64), iterations: MISSION_KDF_ITER, hash: 'SHA-256' },
+    base, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
+  missionKdfCache.set(ck, key);
+  return key;
+}
+async function aesEnc(key, bytes) {
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const ct = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, bytes);
+  return { iv: bytesToB64(iv), ct: bytesToB64(ct) };
+}
+async function aesDec(key, obj) {
+  return new Uint8Array(await crypto.subtle.decrypt({ name: 'AES-GCM', iv: b64ToBytes(obj.iv) }, key, b64ToBytes(obj.ct)));
+}
+async function encJSON(key, obj) { return aesEnc(key, mTe.encode(JSON.stringify(obj))); }
+async function decJSON(key, obj) { return JSON.parse(mTd.decode(await aesDec(key, obj))); }
+async function importMissionKey(raw) { return crypto.subtle.importKey('raw', raw, 'AES-GCM', false, ['encrypt', 'decrypt']); }
+
+// Protège la clé brute d'une mission avec un secret (code mission ou code admin)
+async function wrapRaw(raw, secret) {
+  const salt = randB64(16);
+  const k = await missionKdf(secret, salt);
+  return { salt, ...(await aesEnc(k, raw)) };
+}
+async function unwrapRaw(wrap, secret) {
+  if (!wrap || secret == null) return null;
+  try { return await aesDec(await missionKdf(secret, wrap.salt), wrap); } catch (e) { return null; }
+}
+
+// ── Codes mémorisés sur l'appareil ────────────────
+function missionCodesKey() { return 'kt_mission_codes_' + (state.raceName || 'default').replace(/\s+/g, '_').toLowerCase(); }
+function getStoredMissionCodes() { try { return JSON.parse(localStorage.getItem(missionCodesKey()) || '{}'); } catch (e) { return {}; } }
+function storeMissionCode(id, code) {
+  try { const c = getStoredMissionCodes(); c[id] = code; localStorage.setItem(missionCodesKey(), JSON.stringify(c)); } catch (e) {}
+}
+function forgetMissionCodes() {
+  try { localStorage.removeItem(missionCodesKey()); } catch (e) {}
+  missionKeys = {}; missionPlain = {}; missionPlainSig = {}; missionDecryptedComments = {};
+  refreshMissionKeys().then(refreshMissionViews);
+}
+
+// ── Accès aux missions ────────────────────────────
+function isMissionAdmin() { return currentRole === 'admin'; }
+function missionIsUnlocked(id) {
+  const m = (state.missions || {})[id];
+  return !!m && (!m.hidden || !!missionPlain[id]);
+}
+function missionInfo(id) {
+  const m = (state.missions || {})[id];
+  if (!m) return null;
+  if (!m.hidden) return { name: m.name || 'Mission', description: m.description || '', location: m.location || '', start: m.start || '', end: m.end || '', hidden: false, locked: false };
+  const p = missionPlain[id];
+  if (p) return { name: p.name || 'Mission', description: p.description || '', location: p.location || '', start: p.start || '', end: p.end || '', hidden: true, locked: false };
+  return { name: 'Mission confidentielle', description: '', location: '', start: '', end: '', hidden: true, locked: true };
+}
+// Missions visibles pour l'utilisateur courant (les confidentielles verrouillées sont invisibles, sauf pour l'admin)
+function visibleMissionIds(includeLockedForAdmin) {
+  return Object.keys(state.missions || {}).filter(id => missionIsUnlocked(id) || (includeLockedForAdmin && isMissionAdmin()));
+}
+function missionSortKey(id) { const i = missionInfo(id); return (i.start || '99:99') + (i.name || ''); }
+function missionLabel(id) {
+  const i = missionInfo(id);
+  if (!i) return '';
+  return (i.hidden ? '🔒 ' : '') + i.name;
+}
+
+async function getMissionKey(id) {
+  const m = (state.missions || {})[id];
+  if (!m || !m.hidden) {
+    if (m && m.openKey) return importMissionKey(b64ToBytes(m.openKey));
+    return null;
+  }
+  return missionKeys[id] || null;
+}
+
+// Tente de déverrouiller les missions confidentielles (codes mémorisés, code admin)
+let missionRefreshRunning = null;
+async function refreshMissionKeys() {
+  if (missionRefreshRunning) return missionRefreshRunning;
+  missionRefreshRunning = (async () => {
+    let changed = false;
+    const missions = state.missions || {};
+    const codes = getStoredMissionCodes();
+    for (const [id, m] of Object.entries(missions)) {
+      if (!m.hidden) continue;
+      if (!missionKeys[id]) {
+        let raw = null, viaCode = false;
+        if (codes[id]) { raw = await unwrapRaw(m.wrapCode, codes[id]); viaCode = !!raw; }
+        if (!raw && missionAdminSecret !== null) raw = await unwrapRaw(m.wrapAdmin, missionAdminSecret);
+        if (!raw) continue;
+        missionKeys[id] = await importMissionKey(raw);
+        // Auto-réparation : l'admin a la clé mais son accès admin est périmé (code admin changé)
+        if (viaCode && isMissionAdmin() && missionAdminSecret !== null && !(await unwrapRaw(m.wrapAdmin, missionAdminSecret))) {
+          m.wrapAdmin = await wrapRaw(raw, missionAdminSecret); saveState();
+        }
+      }
+      if (m.enc && missionPlainSig[id] !== m.enc.ct) {
+        try { missionPlain[id] = await decJSON(missionKeys[id], m.enc); missionPlainSig[id] = m.enc.ct; changed = true; }
+        catch (e) { delete missionKeys[id]; delete missionPlain[id]; }
+      }
+    }
+    // Missions supprimées
+    for (const id of Object.keys(missionPlain)) if (!missions[id]) { delete missionPlain[id]; delete missionKeys[id]; changed = true; }
+    return changed;
+  })();
+  try { return await missionRefreshRunning; } finally { missionRefreshRunning = null; }
+}
+
+async function unlockMissionWithCode() {
+  const input = document.getElementById('mission-unlock-code');
+  const msg = document.getElementById('mission-unlock-msg');
+  const code = (input.value || '').trim();
+  if (!code) return;
+  msg.style.color = 'var(--text3)'; msg.textContent = 'Vérification…';
+  const found = [];
+  for (const [id, m] of Object.entries(state.missions || {})) {
+    if (!m.hidden || missionPlain[id]) continue;
+    const raw = await unwrapRaw(m.wrapCode, code);
+    if (!raw) continue;
+    missionKeys[id] = await importMissionKey(raw);
+    storeMissionCode(id, code);
+    found.push(id);
+  }
+  await refreshMissionKeys();
+  if (found.length) {
+    input.value = '';
+    msg.style.color = 'var(--success)';
+    msg.textContent = '✓ Débloquée : ' + found.map(id => missionInfo(id).name).join(', ');
+    refreshMissionViews();
+  } else {
+    msg.style.color = 'var(--error)';
+    msg.textContent = 'Aucune mission ne correspond à ce code.';
+  }
+}
+
+// ── Stockage séparé (commentaires, contenu des fiches) ─────────
+// Hors du nœud "race" pour ne pas alourdir chaque enregistrement de passage.
+let extLocalData = null;
+let extLocalListeners = [];
+function extLocalLoad() { if (!extLocalData) { try { extLocalData = JSON.parse(localStorage.getItem('kt_ext') || '{}'); } catch (e) { extLocalData = {}; } } return extLocalData; }
+function extLocalSave() { localStorage.setItem('kt_ext', JSON.stringify(extLocalData)); }
+function extLocalGet(path) { let o = extLocalLoad(); for (const p of path.split('/')) { if (o == null) return null; o = o[p]; } return o == null ? null : o; }
+function extLocalSet(path, val) {
+  const parts = path.split('/'); let o = extLocalLoad();
+  for (let i = 0; i < parts.length - 1; i++) { if (typeof o[parts[i]] !== 'object' || !o[parts[i]]) o[parts[i]] = {}; o = o[parts[i]]; }
+  if (val == null) delete o[parts[parts.length - 1]]; else o[parts[parts.length - 1]] = val;
+  extLocalSave();
+  extLocalListeners.forEach(l => { if (path.startsWith(l.path)) l.cb(extLocalGet(l.path)); });
+}
+function extPush(path, val) {
+  const id = 'c' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+  if (useLocal) { extLocalSet(path + '/' + id, val); return Promise.resolve(id); }
+  return db.ref(path + '/' + id).set(val).then(() => id);
+}
+function extSet(path, val) {
+  if (useLocal) { try { extLocalSet(path, val); return Promise.resolve(); } catch (e) { return Promise.reject(e); } }
+  return db.ref(path).set(val);
+}
+function extGet(path) {
+  if (useLocal) return Promise.resolve(extLocalGet(path));
+  return db.ref(path).once('value').then(s => s.val());
+}
+function extListen(path, cb) {
+  if (useLocal) {
+    const l = { path, cb }; extLocalListeners.push(l); cb(extLocalGet(path));
+    return () => { extLocalListeners = extLocalListeners.filter(x => x !== l); };
+  }
+  if (!db) return () => {};
+  const ref = db.ref(path); const h = ref.on('value', s => cb(s.val()));
+  return () => ref.off('value', h);
+}
+
+function startMissionCommentsListener() {
+  if (missionCommentsUnsub) return;
+  if (!useLocal && !db) return;
+  missionCommentsUnsub = extListen('missionComments', val => {
+    missionComments = val || {};
+    refreshMissionViews();
+  });
+}
+function stopMissionCommentsListener() {
+  if (missionCommentsUnsub) { missionCommentsUnsub(); missionCommentsUnsub = null; }
+  missionComments = {};
+}
+
+// ── Création / modification ───────────────────────
+function readMissionForm(prefix) {
+  const g = s => (document.getElementById(prefix + s) || {}).value || '';
+  return {
+    name: g('name').trim(), needed: parseInt(g('needed')) || 1,
+    start: g('start'), end: g('end'),
+    location: g('location').trim(), description: g('description').trim(),
+    hidden: !!(document.getElementById(prefix + 'hidden') || {}).checked,
+    code: g('code').trim()
+  };
+}
+
+async function buildHiddenMission(fields, code, raw) {
+  raw = raw || crypto.getRandomValues(new Uint8Array(32));
+  const key = await importMissionKey(raw);
+  const plain = { name: fields.name, description: fields.description, location: fields.location, start: fields.start, end: fields.end };
+  const m = {
+    hidden: true, needed: fields.needed,
+    enc: await encJSON(key, plain),
+    wrapCode: await wrapRaw(raw, code),
+    wrapAdmin: await wrapRaw(raw, missionAdminSecret == null ? '' : missionAdminSecret)
+  };
+  return { m, key, plain };
+}
+
+async function addMission() {
+  if (!isMissionAdmin()) return;
+  const f = readMissionForm('mission-');
+  const msg = document.getElementById('mission-create-msg');
+  const fail = t => { msg.style.color = 'var(--error)'; msg.textContent = t; };
+  if (!f.name) return fail('Indiquez un nom de mission.');
+  if (f.hidden && f.code.length < 4) return fail('Le code confidentiel doit faire au moins 4 caractères.');
   if (!state.missions) state.missions = {};
   const id = genId('mis');
-  state.missions[id] = { name, needed, start: start || '', end: end || '' };
+  if (f.hidden) {
+    msg.style.color = 'var(--text3)'; msg.textContent = 'Chiffrement…';
+    const { m, key, plain } = await buildHiddenMission(f, f.code);
+    m.createdAt = new Date().toISOString();
+    state.missions[id] = m;
+    missionKeys[id] = key; missionPlain[id] = plain; missionPlainSig[id] = m.enc.ct;
+    storeMissionCode(id, f.code);
+  } else {
+    state.missions[id] = { name: f.name, needed: f.needed, start: f.start, end: f.end, location: f.location, description: f.description, createdAt: new Date().toISOString() };
+  }
   saveState();
-  document.getElementById('mission-name').value = '';
-  document.getElementById('mission-needed').value = '';
-  document.getElementById('mission-start').value = '';
-  document.getElementById('mission-end').value = '';
-  renderMissionList(); updateVolMissionSelects();
+  ['name','needed','start','end','location','description','code'].forEach(s => { const e = document.getElementById('mission-' + s); if (e) e.value = ''; });
+  const hc = document.getElementById('mission-hidden'); if (hc) { hc.checked = false; toggleMissionCodeField('mission-'); }
+  msg.style.color = 'var(--success)';
+  msg.textContent = `✓ Mission « ${f.name} » créée${f.hidden ? ' (confidentielle — code à transmettre aux bénévoles concernés)' : ''}.`;
+  refreshMissionViews(); updateVolMissionSelects();
+}
+
+function toggleMissionCodeField(prefix) {
+  const on = document.getElementById(prefix + 'hidden').checked;
+  const wrap = document.getElementById(prefix + 'code-wrap');
+  if (wrap) wrap.style.display = on ? '' : 'none';
+}
+
+async function saveMissionEdit() {
+  const id = missionModalId; const m = state.missions[id];
+  if (!m || !isMissionAdmin()) return;
+  const f = readMissionForm('mm-edit-');
+  const msg = document.getElementById('mm-edit-msg');
+  const fail = t => { msg.style.color = 'var(--error)'; msg.textContent = t; };
+  if (!f.name) return fail('Le nom est obligatoire.');
+  const plain = { name: f.name, description: f.description, location: f.location, start: f.start, end: f.end };
+  msg.style.color = 'var(--text3)'; msg.textContent = 'Enregistrement…';
+
+  if (f.hidden) {
+    let key = missionKeys[id];
+    if (m.hidden && !key) return fail('Mission verrouillée : saisissez son code pour la modifier.');
+    if (!m.hidden) {
+      // Visible -> confidentielle : nouvelle clé
+      if (f.code.length < 4) return fail('Indiquez un code confidentiel (4 caractères minimum).');
+      const built = await buildHiddenMission({ ...f }, f.code);
+      Object.assign(m, built.m); delete m.name; delete m.description; delete m.location; delete m.start; delete m.end;
+      missionKeys[id] = built.key; missionPlain[id] = built.plain; missionPlainSig[id] = m.enc.ct;
+      storeMissionCode(id, f.code);
+    } else {
+      m.needed = f.needed;
+      m.enc = await encJSON(key, plain);
+      missionPlain[id] = plain; missionPlainSig[id] = m.enc.ct;
+      if (f.code) {
+        if (f.code.length < 4) return fail('Le code doit faire au moins 4 caractères.');
+        // Changer le code : on re-protège la même clé (commentaires et fiches restent lisibles)
+        const raw = await findRawKey(id);
+        if (!raw) return fail("Impossible de changer le code : reconnectez-vous en admin ou saisissez l'ancien code.");
+        m.wrapCode = await wrapRaw(raw, f.code);
+        storeMissionCode(id, f.code);
+      }
+    }
+  } else {
+    if (m.hidden) {
+      // Confidentielle -> visible : la clé est publiée pour que l'historique chiffré reste lisible
+      const raw = await findRawKey(id);
+      if (!raw) return fail('Mission verrouillée : saisissez son code pour la rendre visible.');
+      m.openKey = bytesToB64(raw);
+      delete m.hidden; delete m.enc; delete m.wrapCode; delete m.wrapAdmin;
+      delete missionKeys[id]; delete missionPlain[id];
+    }
+    Object.assign(m, { name: f.name, needed: f.needed, start: f.start, end: f.end, location: f.location, description: f.description });
+  }
+  saveState();
+  missionEditing = false;
+  refreshMissionViews(); updateVolMissionSelects();
+}
+
+// Retrouve la clé brute d'une mission (via le code mémorisé ou le code admin)
+async function findRawKey(id) {
+  const m = state.missions[id];
+  if (m.openKey && !m.hidden) return b64ToBytes(m.openKey);
+  const code = getStoredMissionCodes()[id];
+  return (code && await unwrapRaw(m.wrapCode, code)) || (missionAdminSecret !== null && await unwrapRaw(m.wrapAdmin, missionAdminSecret)) || null;
+}
+
+// Changement du code admin : re-protège les missions confidentielles avec le nouveau code
+async function rewrapMissionsForAdmin(newSecret) {
+  let n = 0;
+  for (const id of Object.keys(state.missions || {})) {
+    const m = state.missions[id];
+    if (!m.hidden) continue;
+    const raw = await findRawKey(id);
+    if (!raw) continue;
+    m.wrapAdmin = await wrapRaw(raw, newSecret); n++;
+  }
+  missionAdminSecret = newSecret;
+  return n;
 }
 
 function deleteMission(id) {
-  if (!confirm('Supprimer cette mission ? Les bénévoles affectés resteront inscrits mais sans mission.')) return;
+  const info = missionInfo(id);
+  if (!confirm(`Supprimer la mission « ${info ? info.name : ''} » ? Ses fiches et commentaires seront effacés. Les bénévoles affectés resteront inscrits mais sans mission.`)) return;
+  const m = state.missions[id];
+  Object.keys((m && m.files) || {}).forEach(fid => extSet('missionFileData/' + fid, null));
+  extSet('missionComments/' + id, null);
   delete state.missions[id];
-  // Unassign volunteers from this mission
-  Object.values(state.volunteers || {}).forEach(v => { if (v.missionId === id) v.missionId = ''; });
+  Object.values(state.volunteers || {}).forEach(v => { if (v.missionId === id) { v.missionId = ''; if (v.status === 'assigned') v.status = 'validated'; } });
+  delete missionKeys[id]; delete missionPlain[id];
   saveState();
-  renderMissionList(); renderVolunteerList(); updateVolMissionSelects();
+  if (missionModalId === id) closeMissionModal();
+  refreshMissionViews(); renderVolunteerList(); updateVolMissionSelects();
 }
 
+// ── Statistiques par mission ──────────────────────
+function missionStats(id) {
+  const m = state.missions[id] || {};
+  const vols = Object.values(state.volunteers || {}).filter(v => v.missionId === id);
+  const needed = Math.max(0, parseInt(m.needed) || 0);
+  const assigned = vols.length;
+  const confirmed = vols.filter(v => v.confirmed).length;
+  const present = vols.filter(v => v.present === true).length;
+  const absent = vols.filter(v => v.present === false).length;
+  const files = Object.keys(m.files || {}).length;
+  const comments = Object.values(missionComments[id] || {});
+  const lastComment = comments.reduce((a, c) => Math.max(a, c.at || 0), 0);
+  let status;
+  if (assigned === 0 && needed > 0) status = { key: 'empty', label: 'Personne' };
+  else if (assigned < needed) status = { key: 'short', label: `Manque ${needed - assigned}` };
+  else if (confirmed < Math.min(needed || assigned, assigned)) status = { key: 'confirm', label: 'À confirmer' };
+  else if (needed > 0 && present >= needed) status = { key: 'onsite', label: 'En place' };
+  else status = { key: 'ready', label: 'Prêt' };
+  return { needed, assigned, confirmed, present, absent, files, comments: comments.length, lastComment, status };
+}
+
+// ── Liste des missions (onglet Missions) ──────────
 function renderMissionList() {
   const el = document.getElementById('mission-list');
   if (!el) return;
-  const missions = state.missions || {};
-  const ids = Object.keys(missions);
+  const createCard = document.getElementById('mission-create-card');
+  if (createCard) createCard.style.display = isMissionAdmin() ? '' : 'none';
+  const ids = visibleMissionIds(true).sort((a, b) => missionSortKey(a).localeCompare(missionSortKey(b)));
+  const codes = getStoredMissionCodes();
+  const forget = document.getElementById('mission-forget-codes');
+  if (forget) forget.style.display = Object.keys(codes).length ? '' : 'none';
   if (!ids.length) {
-    el.innerHTML = '<div class="vol-empty"><div class="vol-empty-icon"></div>Aucune mission créée.</div>';
+    el.innerHTML = '<div class="vol-empty"><div class="vol-empty-icon"></div>Aucune mission pour le moment.</div>';
     return;
   }
-  const volunteers = Object.values(state.volunteers || {});
   el.innerHTML = ids.map(id => {
-    const m = missions[id];
-    const assigned = volunteers.filter(v => v.missionId === id).length;
-    const pct = m.needed > 0 ? Math.min(100, Math.round((assigned / m.needed) * 100)) : 0;
+    const info = missionInfo(id);
+    const st = missionStats(id);
+    const pct = st.needed > 0 ? Math.min(100, Math.round((st.assigned / st.needed) * 100)) : 100;
     const fillClass = pct >= 100 ? 'ok' : pct >= 50 ? 'warn' : 'danger';
-    const time = (m.start || m.end) ? `${m.start || '?'} – ${m.end || '?'}` : '';
-    return `<div class="vol-mission-row">
-      <div class="vol-mission-name">${m.name}</div>
-      <div class="vol-mission-meta">${time}</div>
-      <div class="vol-mission-meta">${assigned}/${m.needed}</div>
+    const time = (info.start || info.end) ? `${info.start || '?'} – ${info.end || '?'}` : '';
+    const badges = [
+      info.hidden ? `<span class="mission-badge secret">🔒 ${info.locked ? 'Verrouillée' : 'Confidentielle'}</span>` : '',
+      st.files ? `<span class="mission-badge">📄 ${st.files}</span>` : '',
+      st.comments ? `<span class="mission-badge">💬 ${st.comments}</span>` : ''
+    ].join('');
+    return `<div class="vol-mission-row mission-clickable" onclick="openMissionModal('${id}')">
+      <div style="flex:1;min-width:140px;">
+        <div class="vol-mission-name">${esc(info.name)}</div>
+        <div class="vol-mission-meta">${esc([time, info.location].filter(Boolean).join(' · '))}</div>
+        <div class="mission-badges">${badges}</div>
+      </div>
+      <div class="vol-mission-meta">${st.assigned}/${st.needed}</div>
       <div class="vol-mission-fill-bar"><div class="vol-mission-fill-inner ${fillClass}" style="width:${pct}%"></div></div>
-      <button class="vol-check-btn" onclick="deleteMission('${id}')" title="Supprimer">✕</button>
+      <span class="mission-chevron">›</span>
     </div>`;
   }).join('');
 }
 
 function updateVolMissionSelects() {
-  const missions = state.missions || {};
-  const opts = Object.entries(missions).map(([id, m]) =>`<option value="${id}">${m.name}</option>`).join('');
+  const ids = visibleMissionIds(false).sort((a, b) => missionSortKey(a).localeCompare(missionSortKey(b)));
+  const opts = ids.map(id => `<option value="${id}">${esc(missionLabel(id))}</option>`).join('');
   const newSel = document.getElementById('vol-new-mission');
   if (newSel) newSel.innerHTML = '<option value="">— Mission (optionnel) —</option>' + opts;
   const filterSel = document.getElementById('vol-filter-mission');
   if (filterSel) {
     const current = filterSel.value;
-    filterSel.innerHTML = '<option value="all">Toutes missions</option>' + opts;
-    filterSel.value = current && missions[current] ? current : 'all';
+    filterSel.innerHTML = '<option value="all">Toutes missions</option><option value="none">Non affectés</option>' + opts;
+    filterSel.value = current && (current === 'none' || ids.includes(current)) ? current : 'all';
   }
+}
+
+// ── Tableau de bord ───────────────────────────────
+function renderMissionDashboard() {
+  const el = document.getElementById('mission-dashboard');
+  if (!el || !isMissionAdmin()) return;
+  const ids = Object.keys(state.missions || {}).sort((a, b) => missionSortKey(a).localeCompare(missionSortKey(b)));
+  const vols = Object.entries(state.volunteers || {});
+  const stats = Object.fromEntries(ids.map(id => [id, missionStats(id)]));
+  const sum = k => ids.reduce((a, id) => a + stats[id][k], 0);
+  const needed = sum('needed');
+  const filled = ids.reduce((a, id) => a + Math.min(stats[id].assigned, stats[id].needed), 0);
+  const confirmedSlots = ids.reduce((a, id) => a + Math.min(stats[id].confirmed, stats[id].needed), 0);
+  const unassigned = vols.filter(([, v]) => !v.missionId || !state.missions[v.missionId]);
+  const toConfirm = vols.filter(([, v]) => v.missionId && state.missions[v.missionId] && !v.confirmed);
+  const pendingVal = vols.filter(([, v]) => v.status === 'pending');
+  const presentCount = vols.filter(([, v]) => v.present === true).length;
+  const hiddenCount = ids.filter(id => state.missions[id].hidden).length;
+  const pctOf = (a, b) => b > 0 ? Math.round(a / b * 100) : 0;
+
+  const kpi = (num, label, sub, cls) => `<div class="dash-kpi ${cls || ''}"><div class="dash-kpi-num">${num}</div><div class="dash-kpi-label">${label}</div>${sub ? `<div class="dash-kpi-sub">${sub}</div>` : ''}</div>`;
+  let html = `<div class="dash-kpis">
+    ${kpi(ids.length, 'Missions', hiddenCount ? `dont ${hiddenCount} confidentielle${hiddenCount > 1 ? 's' : ''}` : '')}
+    ${kpi(`${filled}/${needed}`, 'Postes pourvus', `${pctOf(filled, needed)} %`, filled >= needed && needed ? 'good' : 'warn')}
+    ${kpi(`${confirmedSlots}/${needed}`, 'Postes confirmés', `${pctOf(confirmedSlots, needed)} %`, confirmedSlots >= needed && needed ? 'good' : 'warn')}
+    ${kpi(presentCount, 'Présents', `sur ${vols.length} inscrits`)}
+  </div>`;
+
+  // Alertes
+  const alerts = [];
+  const emptyM = ids.filter(id => stats[id].status.key === 'empty');
+  const shortM = ids.filter(id => stats[id].status.key === 'short');
+  const noFile = ids.filter(id => !stats[id].files);
+  const mLinks = list => list.map(id => `<a onclick="openMissionModal('${id}')">${esc(missionLabel(id))}</a>`).join(', ');
+  if (emptyM.length) alerts.push(['danger', `${emptyM.length} mission${emptyM.length > 1 ? 's' : ''} sans aucun bénévole`, mLinks(emptyM)]);
+  if (shortM.length) alerts.push(['warn', `${shortM.length} mission${shortM.length > 1 ? 's' : ''} incomplète${shortM.length > 1 ? 's' : ''}`, mLinks(shortM)]);
+  if (toConfirm.length) alerts.push(['warn', `${toConfirm.length} bénévole${toConfirm.length > 1 ? 's' : ''} affecté${toConfirm.length > 1 ? 's' : ''} à confirmer`, toConfirm.map(([, v]) => esc(v.name)).join(', ')]);
+  if (unassigned.length) alerts.push(['info', `${unassigned.length} bénévole${unassigned.length > 1 ? 's' : ''} sans mission`, unassigned.map(([, v]) => esc(v.name)).join(', ')]);
+  if (pendingVal.length) alerts.push(['info', `${pendingVal.length} inscription${pendingVal.length > 1 ? 's' : ''} en attente de validation`, pendingVal.map(([, v]) => esc(v.name)).join(', ')]);
+  if (noFile.length) alerts.push(['info', `${noFile.length} mission${noFile.length > 1 ? 's' : ''} sans fiche`, mLinks(noFile)]);
+  html += `<div class="vol-card"><div class="section-title" style="margin-top:0;">À traiter</div>${
+    alerts.length ? alerts.map(([cls, title, detail]) => `<div class="dash-alert ${cls}"><div class="dash-alert-title">${title}</div><div class="dash-alert-detail">${detail}</div></div>`).join('')
+    : '<div class="dash-ok">✓ Tout est en ordre : missions pourvues et bénévoles confirmés.</div>'}</div>`;
+
+  // Tableau des missions
+  if (ids.length) {
+    html += `<div class="vol-card" style="padding:0;"><div class="table-scroll"><table class="dash-table"><thead><tr>
+      <th>Mission</th><th>Horaire</th><th>Pourvus</th><th>Confirmés</th><th>Présents</th><th>Fiches</th><th>Fil</th><th>Statut</th>
+    </tr></thead><tbody>${ids.map(id => {
+      const i = missionInfo(id), s = stats[id];
+      const time = (i.start || i.end) ? `${i.start || '?'}–${i.end || '?'}` : '—';
+      const last = s.lastComment ? new Date(s.lastComment).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '';
+      return `<tr onclick="openMissionModal('${id}')">
+        <td><div class="dash-mname">${esc(missionLabel(id))}</div>${i.location ? `<div class="dash-msub">${esc(i.location)}</div>` : ''}</td>
+        <td class="mono">${esc(time)}</td>
+        <td><span class="dash-frac ${s.assigned >= s.needed ? 'ok' : 'bad'}">${s.assigned}/${s.needed}</span></td>
+        <td><span class="dash-frac ${s.confirmed >= Math.min(s.needed, s.assigned) && s.assigned ? 'ok' : s.assigned ? 'warn' : ''}">${s.confirmed}/${s.assigned}</span></td>
+        <td>${s.present}${s.absent ? ` <span class="dash-msub">(${s.absent} abs.)</span>` : ''}</td>
+        <td>${s.files ? '📄 ' + s.files : '<span class="dash-msub">—</span>'}</td>
+        <td>${s.comments ? `💬 ${s.comments}<div class="dash-msub">${last}</div>` : '<span class="dash-msub">—</span>'}</td>
+        <td><span class="mission-status ${s.status.key}">${s.status.label}</span></td>
+      </tr>`;
+    }).join('')}</tbody></table></div></div>`;
+  }
+  el.innerHTML = html;
+}
+
+// ── Fiche détaillée d'une mission ─────────────────
+function openMissionModal(id) {
+  const m = (state.missions || {})[id];
+  if (!m) return;
+  if (m.hidden && !missionPlain[id] && !isMissionAdmin()) return;
+  missionModalId = id; missionEditing = false;
+  const authorInput = document.getElementById('mm-author');
+  if (authorInput && !authorInput.value) {
+    let n = ''; try { n = localStorage.getItem('kt_comment_author') || ''; } catch (e) {}
+    authorInput.value = n || (isMissionAdmin() ? 'Organisation' : '');
+  }
+  document.getElementById('mission-modal-overlay').classList.add('open');
+  renderMissionModal();
+}
+function closeMissionModal() {
+  missionModalId = null; missionEditing = false;
+  document.getElementById('mission-modal-overlay').classList.remove('open');
+}
+
+function renderMissionModal() {
+  const id = missionModalId;
+  if (!id) return;
+  const m = (state.missions || {})[id];
+  if (!m) { closeMissionModal(); return; }
+  const info = missionInfo(id);
+  const admin = isMissionAdmin();
+  document.getElementById('mm-title').innerHTML = `${info.hidden ? '<span class="mission-badge secret">🔒</span> ' : ''}${esc(info.name)}`;
+
+  const locked = info.locked;
+  document.getElementById('mm-locked').style.display = locked ? '' : 'none';
+  document.getElementById('mm-body').style.display = locked ? 'none' : '';
+  if (locked) return;
+
+  // Infos / édition
+  const infoEl = document.getElementById('mm-info');
+  if (missionEditing && admin) {
+    if (!document.getElementById('mm-edit-name')) {
+      infoEl.innerHTML = `<div class="vol-form-grid">
+        <input class="form-input" id="mm-edit-name" placeholder="Nom" value="${esc(info.name)}">
+        <input class="form-input" id="mm-edit-needed" type="number" min="1" placeholder="Bénévoles nécessaires" value="${esc(m.needed || 1)}">
+        <input class="form-input" id="mm-edit-start" type="time" value="${esc(info.start)}">
+        <input class="form-input" id="mm-edit-end" type="time" value="${esc(info.end)}">
+        <input class="form-input" id="mm-edit-location" placeholder="Lieu / point de RDV" value="${esc(info.location)}" style="grid-column:1/-1;">
+        <textarea class="form-input" id="mm-edit-description" rows="3" placeholder="Consignes, matériel, contact…" style="grid-column:1/-1;">${esc(info.description)}</textarea>
+      </div>
+      <label class="mission-secret-toggle"><input type="checkbox" id="mm-edit-hidden" ${info.hidden ? 'checked' : ''} onchange="toggleMissionCodeField('mm-edit-')"> Mission confidentielle (visible uniquement avec un code)</label>
+      <div id="mm-edit-code-wrap" style="${info.hidden ? '' : 'display:none;'}">
+        <input class="form-input" id="mm-edit-code" type="text" autocomplete="off" placeholder="${info.hidden ? 'Nouveau code (laisser vide pour garder l\'actuel)' : 'Code confidentiel (4 caractères min.)'}">
+      </div>
+      <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;">
+        <button class="btn btn-primary" onclick="saveMissionEdit()">Enregistrer</button>
+        <button class="btn" onclick="missionEditing=false;renderMissionModal();">Annuler</button>
+      </div>
+      <div id="mm-edit-msg" class="mm-msg"></div>`;
+    }
+  } else {
+    const time = (info.start || info.end) ? `${info.start || '?'} – ${info.end || '?'}` : '';
+    const st = missionStats(id);
+    infoEl.innerHTML = `
+      <div class="mm-facts">
+        ${time ? `<div><span>Horaire</span><strong>${esc(time)}</strong></div>` : ''}
+        ${info.location ? `<div><span>Lieu</span><strong>${esc(info.location)}</strong></div>` : ''}
+        <div><span>Équipe</span><strong>${st.assigned}/${st.needed} · ${st.confirmed} confirmé${st.confirmed > 1 ? 's' : ''}</strong></div>
+        <div><span>Statut</span><strong><span class="mission-status ${st.status.key}">${st.status.label}</span></strong></div>
+      </div>
+      ${info.description ? `<div class="mm-desc">${esc(info.description)}</div>` : ''}
+      ${admin ? `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;">
+        <button class="btn" onclick="missionEditing=true;renderMissionModal();">Modifier</button>
+        <button class="btn" style="border-color:var(--error);color:var(--error);" onclick="deleteMission('${id}')">Supprimer</button>
+      </div>` : ''}`;
+  }
+
+  renderMissionFiles();
+  renderMissionTeam();
+  renderMissionComments();
+  document.getElementById('mm-upload').style.display = admin ? '' : 'none';
+}
+
+async function unlockMissionFromModal() {
+  const input = document.getElementById('mm-unlock-code');
+  const msg = document.getElementById('mm-unlock-msg');
+  const id = missionModalId; const m = state.missions[id];
+  msg.textContent = 'Vérification…'; msg.style.color = 'var(--text3)';
+  const raw = await unwrapRaw(m.wrapCode, (input.value || '').trim());
+  if (!raw) { msg.textContent = 'Code incorrect.'; msg.style.color = 'var(--error)'; return; }
+  missionKeys[id] = await importMissionKey(raw);
+  storeMissionCode(id, input.value.trim());
+  input.value = ''; msg.textContent = '';
+  await refreshMissionKeys();
+  refreshMissionViews();
+}
+
+// ── Fiches ────────────────────────────────────────
+function fmtSize(n) { return n > 1048576 ? (n / 1048576).toFixed(1) + ' Mo' : Math.max(1, Math.round(n / 1024)) + ' Ko'; }
+async function missionFileMeta(id, fid) {
+  const f = state.missions[id].files[fid];
+  if (!f.encMeta) return f;
+  if (f._plain) return f._plain;
+  const key = await getMissionKey(id);
+  if (!key) return { name: 'Fiche chiffrée', type: '', size: f.size };
+  try { f._plain = { ...(await decJSON(key, f.encMeta)), size: f.size, uploadedAt: f.uploadedAt }; return f._plain; }
+  catch (e) { return { name: 'Fiche illisible', type: '', size: f.size }; }
+}
+
+async function renderMissionFiles() {
+  const id = missionModalId; const el = document.getElementById('mm-files');
+  const files = (state.missions[id] && state.missions[id].files) || {};
+  const fids = Object.keys(files).sort((a, b) => (files[a].uploadedAt || '').localeCompare(files[b].uploadedAt || ''));
+  if (!fids.length) { el.innerHTML = '<div class="mm-empty">Aucune fiche pour cette mission.</div>'; return; }
+  const rows = [];
+  for (const fid of fids) {
+    const meta = await missionFileMeta(id, fid);
+    const icon = /pdf/.test(meta.type) ? '📕' : /image/.test(meta.type) ? '🖼' : /sheet|excel|csv/.test(meta.type) ? '📊' : '📄';
+    rows.push(`<div class="mm-file">
+      <span class="mm-file-icon">${icon}</span>
+      <div class="mm-file-name"><div>${esc(meta.name)}</div><div class="dash-msub">${fmtSize(meta.size || 0)}${meta.uploadedAt ? ' · ' + new Date(meta.uploadedAt).toLocaleDateString('fr-FR') : ''}</div></div>
+      <button class="btn mm-small-btn" onclick="openMissionFile('${fid}')">Ouvrir</button>
+      ${isMissionAdmin() ? `<button class="vol-check-btn" title="Supprimer la fiche" onclick="deleteMissionFile('${fid}')">✕</button>` : ''}
+    </div>`);
+  }
+  if (missionModalId === id) el.innerHTML = rows.join('');
+}
+
+function readFileAsBytes(file) {
+  return new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(new Uint8Array(r.result)); r.onerror = () => rej(r.error); r.readAsArrayBuffer(file); });
+}
+
+async function uploadMissionFiles(fileList) {
+  const id = missionModalId; const m = state.missions[id];
+  const msg = document.getElementById('mm-upload-msg');
+  if (!m || !isMissionAdmin()) return;
+  const max = useLocal ? MISSION_FILE_MAX_LOCAL : MISSION_FILE_MAX;
+  const key = m.hidden ? await getMissionKey(id) : null;
+  if (m.hidden && !key) { msg.style.color = 'var(--error)'; msg.textContent = 'Mission verrouillée.'; return; }
+  for (const file of [...fileList]) {
+    if (file.size > max) { msg.style.color = 'var(--error)'; msg.textContent = `« ${file.name} » dépasse ${fmtSize(max)}. Compressez-la ou découpez-la.`; continue; }
+    msg.style.color = 'var(--text3)'; msg.textContent = `Envoi de « ${file.name} »…`;
+    try {
+      const bytes = await readFileAsBytes(file);
+      const fid = genId('fil');
+      const meta = { name: file.name, type: file.type || '' };
+      const payload = key ? { enc: await aesEnc(key, bytes) } : { data: bytesToB64(bytes), type: meta.type };
+      await extSet('missionFileData/' + fid, payload);
+      if (!m.files) m.files = {};
+      m.files[fid] = key
+        ? { encMeta: await encJSON(key, meta), size: file.size, uploadedAt: new Date().toISOString() }
+        : { ...meta, size: file.size, uploadedAt: new Date().toISOString() };
+      saveState();
+      msg.style.color = 'var(--success)'; msg.textContent = `✓ « ${file.name} » ajoutée.`;
+    } catch (e) {
+      msg.style.color = 'var(--error)';
+      msg.textContent = useLocal ? 'Stockage du navigateur plein : fichier trop volumineux pour le mode local.' : "Échec de l'envoi : " + (e.message || e);
+    }
+  }
+  document.getElementById('mm-file-input').value = '';
+  refreshMissionViews();
+}
+
+async function openMissionFile(fid) {
+  const id = missionModalId;
+  const meta = await missionFileMeta(id, fid);
+  const msg = document.getElementById('mm-upload-msg');
+  msg.style.color = 'var(--text3)'; msg.textContent = 'Téléchargement…';
+  // Fenêtre ouverte tout de suite (sinon bloquée par les navigateurs mobiles après l'attente)
+  const canPreview = /pdf|image/.test(meta.type || '');
+  const win = canPreview ? window.open('', '_blank') : null;
+  try {
+    const payload = await extGet('missionFileData/' + fid);
+    if (!payload) throw new Error('fichier introuvable');
+    let bytes;
+    if (payload.enc) {
+      const key = await getMissionKey(id);
+      if (!key) throw new Error('mission verrouillée');
+      bytes = await aesDec(key, payload.enc);
+    } else bytes = b64ToBytes(payload.data);
+    const url = URL.createObjectURL(new Blob([bytes], { type: meta.type || 'application/octet-stream' }));
+    if (win) { win.location.href = url; }
+    else { const a = document.createElement('a'); a.href = url; a.download = meta.name || 'fiche'; document.body.appendChild(a); a.click(); a.remove(); }
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
+    msg.textContent = '';
+  } catch (e) {
+    if (win) win.close();
+    msg.style.color = 'var(--error)'; msg.textContent = 'Impossible d\'ouvrir la fiche : ' + (e.message || e);
+  }
+}
+
+function deleteMissionFile(fid) {
+  const id = missionModalId; const m = state.missions[id];
+  if (!m || !m.files || !m.files[fid]) return;
+  if (!confirm('Supprimer cette fiche ?')) return;
+  delete m.files[fid];
+  extSet('missionFileData/' + fid, null);
+  saveState(); refreshMissionViews();
+}
+
+// ── Équipe de la mission ──────────────────────────
+function renderMissionTeam() {
+  const id = missionModalId; const el = document.getElementById('mm-team');
+  const admin = isMissionAdmin();
+  const vols = Object.entries(state.volunteers || {}).filter(([, v]) => v.missionId === id).sort((a, b) => (a[1].name || '').localeCompare(b[1].name || ''));
+  let html = vols.length ? vols.map(([vid, v]) => `<div class="mm-vol">
+      <div class="mm-vol-name"><div>${esc(v.name)}</div><div class="dash-msub">${esc(v.phone || '')}</div></div>
+      <button class="mm-pill ${v.confirmed ? 'on' : ''}" ${admin ? `onclick="toggleVolunteerConfirmed('${vid}')"` : 'disabled'} title="Le bénévole a confirmé sa venue">${v.confirmed ? '✓ Confirmé' : 'À confirmer'}</button>
+      <button class="mm-pill ${v.present === true ? 'on' : v.present === false ? 'off' : ''}" onclick="cycleVolunteerPresence('${vid}')" title="Présence le jour J">${v.present === true ? 'Présent' : v.present === false ? 'Absent' : 'Non pointé'}</button>
+      ${admin ? `<button class="vol-check-btn" title="Retirer de la mission" onclick="assignVolunteer('${vid}','')">✕</button>` : ''}
+    </div>`).join('') : '<div class="mm-empty">Aucun bénévole affecté.</div>';
+  if (admin) {
+    const free = Object.entries(state.volunteers || {}).filter(([, v]) => !v.missionId || !state.missions[v.missionId]).sort((a, b) => (a[1].name || '').localeCompare(b[1].name || ''));
+    html += free.length ? `<div class="mm-assign"><select class="form-input" id="mm-assign-select">${free.map(([vid, v]) => `<option value="${vid}">${esc(v.name)}${v.status === 'pending' ? ' (en attente)' : ''}</option>`).join('')}</select>
+      <button class="btn" onclick="assignVolunteer(document.getElementById('mm-assign-select').value, missionModalId)">Affecter</button></div>`
+      : '<div class="dash-msub" style="margin-top:8px;">Tous les bénévoles inscrits ont déjà une mission.</div>';
+  }
+  el.innerHTML = html;
+}
+
+function assignVolunteer(vid, missionId) {
+  const v = (state.volunteers || {})[vid];
+  if (!v) return;
+  v.missionId = missionId || '';
+  if (missionId && v.status === 'validated') v.status = 'assigned';
+  if (!missionId) { v.confirmed = false; if (v.status === 'assigned') v.status = 'validated'; }
+  saveState();
+  renderVolunteerList(); updateVolunteerStats();
+}
+function toggleVolunteerConfirmed(vid) {
+  const v = (state.volunteers || {})[vid];
+  if (!v) return;
+  v.confirmed = !v.confirmed;
+  saveState(); renderVolunteerList(); updateVolunteerStats();
+}
+function cycleVolunteerPresence(vid) {
+  const v = (state.volunteers || {})[vid];
+  if (!v) return;
+  v.present = v.present === null || v.present === undefined ? true : v.present === true ? false : null;
+  saveState(); renderVolunteerList(); updateVolunteerStats();
+}
+
+// ── Commentaires ──────────────────────────────────
+function myCommentClientId() {
+  try { let c = localStorage.getItem('kt_client_id'); if (!c) { c = randB64(9).replace(/[^a-z0-9]/gi, ''); localStorage.setItem('kt_client_id', c); } return c; } catch (e) { return 'anon'; }
+}
+
+async function renderMissionComments() {
+  const id = missionModalId; const el = document.getElementById('mm-comments');
+  const items = Object.entries(missionComments[id] || {}).sort((a, b) => (a[1].at || 0) - (b[1].at || 0));
+  if (!items.length) { el.innerHTML = '<div class="mm-empty">Aucun commentaire. Posez une question ou partagez une info avec l\'équipe.</div>'; return; }
+  const key = await getMissionKey(id);
+  const me = myCommentClientId();
+  const rows = [];
+  for (const [cid, c] of items) {
+    let body = c;
+    if (c.enc) {
+      if (missionDecryptedComments[cid]) body = missionDecryptedComments[cid];
+      else if (key) { try { body = await decJSON(key, c.enc); missionDecryptedComments[cid] = body; } catch (e) { body = { author: '?', text: '(commentaire illisible)' }; } }
+      else body = { author: '?', text: '(commentaire chiffré)' };
+    }
+    const when = c.at ? new Date(c.at).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '';
+    const canDel = isMissionAdmin() || c.cid === me;
+    rows.push(`<div class="mm-comment ${c.role === 'admin' ? 'from-admin' : ''}">
+      <div class="mm-comment-head"><strong>${esc(body.author || 'Anonyme')}</strong>${c.role === 'admin' ? '<span class="mission-badge">Orga</span>' : ''}<span class="dash-msub">${when}</span>
+        ${canDel ? `<button class="mm-comment-del" title="Supprimer" onclick="deleteMissionComment('${cid}')">✕</button>` : ''}</div>
+      <div class="mm-comment-text">${esc(body.text)}</div>
+    </div>`);
+  }
+  if (missionModalId !== id) return;
+  const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 40;
+  el.innerHTML = rows.join('');
+  if (atBottom) el.scrollTop = el.scrollHeight;
+}
+
+async function postMissionComment() {
+  const id = missionModalId;
+  const textEl = document.getElementById('mm-comment-text');
+  const authorEl = document.getElementById('mm-author');
+  const msg = document.getElementById('mm-comment-msg');
+  const text = (textEl.value || '').trim();
+  const author = (authorEl.value || '').trim();
+  if (!text) return;
+  if (!author) { msg.style.color = 'var(--error)'; msg.textContent = 'Indiquez votre nom.'; authorEl.focus(); return; }
+  try { localStorage.setItem('kt_comment_author', author); } catch (e) {}
+  const m = state.missions[id];
+  const item = { at: Date.now(), role: currentRole, cid: myCommentClientId() };
+  if (m.hidden) {
+    const key = await getMissionKey(id);
+    if (!key) { msg.style.color = 'var(--error)'; msg.textContent = 'Mission verrouillée.'; return; }
+    item.enc = await encJSON(key, { author, text });
+  } else { item.author = author; item.text = text; }
+  try {
+    await extPush('missionComments/' + id, item);
+    textEl.value = ''; msg.textContent = '';
+  } catch (e) { msg.style.color = 'var(--error)'; msg.textContent = "Échec de l'envoi : " + (e.message || e); }
+}
+
+function deleteMissionComment(cid) {
+  if (!confirm('Supprimer ce commentaire ?')) return;
+  extSet('missionComments/' + missionModalId + '/' + cid, null);
+}
+
+// ── Rafraîchissement global ───────────────────────
+function refreshMissionViews() {
+  renderMissionList();
+  updateVolMissionSelects();
+  if (activeVolTab === 'dashboard') renderMissionDashboard();
+  if (missionModalId) renderMissionModal();
 }
 
 // ── INSCRIPTION BÉNÉVOLE ──────────────────────────
@@ -5558,10 +6474,14 @@ function renderVolunteerList() {
   const missionFilter = (document.getElementById('vol-filter-mission') || {}).value || 'all';
   const search = ((document.getElementById('vol-search') || {}).value || '').trim().toLowerCase();
   const missions = state.missions || {};
+  const admin = isMissionAdmin();
 
   let entries = Object.entries(state.volunteers || {});
-  if (statusFilter !== 'all') entries = entries.filter(([,v]) => v.status === statusFilter);
-  if (missionFilter !== 'all') entries = entries.filter(([,v]) => v.missionId === missionFilter);
+  if (statusFilter === 'toconfirm') entries = entries.filter(([,v]) => v.missionId && missions[v.missionId] && !v.confirmed);
+  else if (statusFilter === 'confirmed') entries = entries.filter(([,v]) => v.confirmed);
+  else if (statusFilter !== 'all') entries = entries.filter(([,v]) => v.status === statusFilter);
+  if (missionFilter === 'none') entries = entries.filter(([,v]) => !v.missionId || !missions[v.missionId]);
+  else if (missionFilter !== 'all') entries = entries.filter(([,v]) => v.missionId === missionFilter);
   if (search) entries = entries.filter(([,v]) => (v.name||'').toLowerCase().includes(search) || (v.phone||'').includes(search));
 
   entries.sort((a,b) => (a[1].name||'').localeCompare(b[1].name||''));
@@ -5570,21 +6490,38 @@ function renderVolunteerList() {
     el.innerHTML = '<div class="vol-empty"><div class="vol-empty-icon"></div>Aucun bénévole ne correspond à ce filtre.</div>';
     return;
   }
+  const missionOpts = visibleMissionIds(false).sort((a, b) => missionSortKey(a).localeCompare(missionSortKey(b)));
 
   el.innerHTML = entries.map(([id, v]) => {
     const initials = (v.name||'?').trim().split(/\s+/).map(w=>w[0]).slice(0,2).join('').toUpperCase();
-    const missionName = v.missionId && missions[v.missionId] ? missions[v.missionId].name : '<span style="color:var(--text3);">Non affecté</span>';
+    const hasMission = v.missionId && missions[v.missionId];
+    const missionName = hasMission
+      ? (missionIsUnlocked(v.missionId) || admin
+          ? `<a class="vol-mission-link" onclick="openMissionModal('${v.missionId}')">${esc(missionLabel(v.missionId))}</a>`
+          : '🔒 Mission confidentielle')
+      : '<span style="color:var(--text3);">Non affecté</span>';
     const statusLabels = { pending: 'En attente', validated: 'Validé', assigned: 'Affecté' };
     const presentClass = v.present === true ? 'active-in' : '';
     const absentClass = v.present === false ? 'active-absent' : '';
+    // Sélecteur de mission (admin) : on garde l'affectation actuelle même si la mission est verrouillée
+    let missionSelect = '';
+    if (admin) {
+      const cur = hasMission && !missionOpts.includes(v.missionId) ? `<option value="${v.missionId}" selected>${esc(missionLabel(v.missionId))}</option>` : '';
+      missionSelect = `<select class="form-input vol-mission-select" onchange="assignVolunteer('${id}', this.value)">
+        <option value="">— Aucune mission —</option>${cur}
+        ${missionOpts.map(mid => `<option value="${mid}" ${v.missionId===mid?'selected':''}>${esc(missionLabel(mid))}</option>`).join('')}
+      </select>`;
+    }
     return `<div class="vol-list-row">
-      <div class="vol-avatar">${initials}</div>
+      <div class="vol-avatar">${esc(initials)}</div>
       <div class="vol-name-block">
-        <div class="vol-name">${v.name}</div>
-        <div class="vol-contact">${v.phone || ''}${v.phone && v.email ? ' · ' : ''}${v.email || ''}</div>
+        <div class="vol-name">${esc(v.name)}</div>
+        <div class="vol-contact">${esc(v.phone || '')}${v.phone && v.email ? ' · ' : ''}${esc(v.email || '')}</div>
         <div class="vol-contact">${missionName}</div>
       </div>
-      <span class="vol-status-pill ${v.status}">${statusLabels[v.status]||v.status}</span>
+      <span class="vol-status-pill ${esc(v.status)}">${statusLabels[v.status]||esc(v.status)}</span>
+      ${missionSelect}
+      ${hasMission ? `<button class="mm-pill ${v.confirmed ? 'on' : ''}" ${admin ? `onclick="toggleVolunteerConfirmed('${id}')"` : 'disabled'} title="Le bénévole a confirmé sa venue">${v.confirmed ? '✓ Confirmé' : 'À confirmer'}</button>` : ''}
       <div class="vol-check-row">
         <button class="vol-check-btn ${presentClass}" title="Marquer présent" onclick="setVolunteerPresence('${id}', true)">✓</button>
         <button class="vol-check-btn ${absentClass}" title="Marquer absent" onclick="setVolunteerPresence('${id}', false)">✕</button>
@@ -5633,16 +6570,17 @@ function updateVolunteerStats() {
   set('vol-stat-validated', validated);
   set('vol-stat-assigned', assigned);
   set('vol-stat-present', present);
+  if (typeof refreshMissionViews === 'function') refreshMissionViews();
 }
 
 function exportVolunteersCSV() {
   const missions = state.missions || {};
   const vols = Object.values(state.volunteers || {});
-  let csv = 'Nom,Telephone,Email,Mission,Statut,Présence,Date inscription\n';
+  let csv = 'Nom,Telephone,Email,Mission,Statut,Confirmé,Présence,Date inscription\n';
   vols.forEach(v => {
-    const missionName = v.missionId && missions[v.missionId] ? missions[v.missionId].name : '';
+    const missionName = v.missionId && missions[v.missionId] ? missionInfo(v.missionId).name : '';
     const presence = v.present === true ? 'Présent' : v.present === false ? 'Absent' : 'Non pointé';
-    csv += `"${v.name}","${v.phone||''}","${v.email||''}","${missionName}","${v.status}","${presence}","${(v.registeredAt||'').slice(0,10)}"\n`;
+    csv += `"${v.name}","${v.phone||''}","${v.email||''}","${missionName}","${v.status}","${v.confirmed ? 'Oui' : 'Non'}","${presence}","${(v.registeredAt||'').slice(0,10)}"\n`;
   });
   const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
   const a = document.createElement('a');
@@ -6088,6 +7026,8 @@ async function wipeAllData() {
     missions: {}, volunteers: {}
   };
   saveState();
+  extSet('missionComments', null); extSet('missionFileData', null);
+  missionKeys = {}; missionPlain = {}; missionPlainSig = {};
   applyState();
   const msgEl = document.getElementById('demo-msg');
   if (msgEl) { msgEl.style.color = 'var(--text2)'; msgEl.textContent = '✓ Toutes les données ont été effacées.'; }

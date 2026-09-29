@@ -3,8 +3,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Suivi de Course en Direct</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="strict-origin-when-cross-origin">
 <style>/* cyrillic-ext */
 @font-face {
   font-family: 'Inter';
@@ -327,6 +327,7 @@
 <!-- Firebase SDK -->
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 
 <!-- SheetJS for Excel import -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -1129,6 +1130,21 @@ select option { background: var(--surface2); color: var(--text); }
 .empty-state { text-align: center; padding: 52px 20px; color: var(--text3); }
 .empty-icon { font-size: 48px; margin-bottom: 14px; opacity: 0.25; }
 
+/* ── SÉCURITÉ / CONFORMITÉ ── */
+.app-legal-footer { text-align: center; font-size: 11.5px; color: var(--text3); padding: 28px 16px calc(28px + env(safe-area-inset-bottom, 0px)); }
+.app-legal-footer a { color: var(--text3); cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+.sec-state { font-size: 13px; line-height: 1.55; padding: 10px 12px; border-radius: 10px; margin-bottom: 10px; }
+.sec-state.ok { background: var(--success-dim); color: var(--text); border-left: 3px solid var(--success); }
+.sec-state.bad { background: rgba(255,69,58,.12); color: var(--text); border-left: 3px solid var(--error); }
+.sec-state.neutral { background: var(--surface2); color: var(--text2); }
+.sec-details summary { cursor: pointer; font-size: 13px; font-weight: 600; color: var(--primary); margin: 4px 0; }
+.sec-steps { font-size: 12.5px; color: var(--text2); line-height: 1.6; padding-left: 20px; margin: 8px 0; }
+.sec-steps li { margin-bottom: 4px; }
+.sec-rules { font-size: 11px; line-height: 1.45; background: var(--surface2); border-radius: 10px; padding: 10px; max-height: 260px; overflow: auto; white-space: pre; color: var(--text2); }
+.legal-warning { font-size: 12px; color: var(--warning); background: rgba(255,159,10,.1); border-radius: 8px; padding: 8px 10px; margin-bottom: 10px; }
+.legal-inline { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--text2); }
+.legal-todo { color: var(--warning); font-style: italic; }
+
 /* ── MISSIONS ── */
 .mission-clickable { cursor: pointer; transition: border-color .12s; }
 .mission-clickable:hover { border-color: var(--primary); }
@@ -1195,6 +1211,11 @@ select option { background: var(--surface2); color: var(--text); }
 .dash-alert-title { font-size: 13px; font-weight: 700; }
 .dash-alert-detail { font-size: 12px; color: var(--text2); margin-top: 3px; line-height: 1.5; }
 .dash-alert-detail a { color: var(--primary); cursor: pointer; }
+.dash-alert-detail:has(.dash-chip) { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 7px; }
+.dash-chip { display: inline-flex; align-items: center; gap: 6px; font: inherit; font-size: 12.5px; font-weight: 600; color: var(--text); background: var(--surface); border: 1px solid var(--border); border-radius: 999px; padding: 5px 8px 5px 12px; cursor: pointer; transition: border-color .12s, color .12s; }
+.dash-chip:hover { border-color: var(--primary); color: var(--primary); }
+.dash-chip em { font-style: normal; font-weight: 400; color: var(--text3); }
+.dash-chip span { color: var(--text3); font-size: 14px; line-height: 1; }
 .dash-ok { font-size: 13px; color: var(--success); }
 .table-scroll { overflow-x: auto; }
 .dash-table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 640px; }
@@ -2004,7 +2025,8 @@ code { background: var(--surface2); }
     </div>
     <div class="rgpd-link-row">
       <a onclick="openRgpdModal('policy')">Politique de confidentialité</a> ·
-      <a onclick="openRgpdModal('rights')">Mes droits sur mes données</a>
+      <a onclick="openRgpdModal('rights')">Mes droits sur mes données</a> ·
+      <a onclick="openRgpdModal('legal')">Mentions légales</a>
     </div>
   </div>
 </div>
@@ -2231,14 +2253,15 @@ code { background: var(--surface2); }
         <div id="mission-create-msg" class="mm-msg"></div>
         <div class="dash-msub" style="margin-top:6px;">Les fiches de mission s'ajoutent ensuite en ouvrant la mission.</div>
       </div>
-      <div class="vol-card">
+      <div class="vol-card" id="mission-unlock-card">
         <div class="section-title" style="margin-top:0;">Accéder à une mission confidentielle</div>
         <div class="mission-unlock-row">
           <input class="form-input" id="mission-unlock-code" type="text" autocomplete="off" placeholder="Code reçu de l'organisation" onkeydown="if(event.key==='Enter')unlockMissionWithCode()">
           <button class="btn" onclick="unlockMissionWithCode()">Débloquer</button>
         </div>
         <div id="mission-unlock-msg" class="mm-msg"></div>
-        <a id="mission-forget-codes" class="mission-forget" style="display:none;" onclick="if(confirm('Oublier les codes enregistrés sur cet appareil ?'))forgetMissionCodes()">Oublier les codes enregistrés sur cet appareil</a>
+        <a id="mission-forget-codes" class="mission-forget" style="display:none;" onclick="forgetMissionCodes()">Verrouiller à nouveau les missions confidentielles</a>
+        <div class="dash-msub" style="margin-top:6px;">Les missions débloquées restent visibles jusqu'à votre déconnexion.</div>
       </div>
       <div class="vol-card">
         <div class="section-title" style="margin-top:0;">Missions</div>
@@ -2291,7 +2314,7 @@ code { background: var(--surface2); }
             J'ai recueilli le consentement de cette personne pour le traitement de ses données
             (nom, contact, mission) dans le cadre de l'organisation de l'événement, conformément à notre
             <a onclick="openRgpdModal('policy')">politique de confidentialité</a>. Les données seront conservées
-            jusqu'à 12 mois après l'événement puis supprimées.
+            jusqu'à <span class="retention-months">12</span> mois après l'événement puis anonymisées.
           </div>
         </div>
 
@@ -2361,8 +2384,31 @@ code { background: var(--surface2); }
       </div>
     </div>
 
+    <!-- SÉCURITÉ DE LA BASE -->
+    <div class="card-block">
+      <div class="section-title" style="margin-top:0;">Sécurité de la base de données</div>
+      <div id="sec-status"></div>
+      <div id="sec-setup">
+        <details class="sec-details">
+          <summary>Mise en place (à faire une seule fois dans la console Firebase)</summary>
+          <ol class="sec-steps">
+            <li><strong>Authentication › Méthode de connexion</strong> : activez « Adresse e-mail/Mot de passe ».</li>
+            <li><strong>Authentication › Utilisateurs › Ajouter un utilisateur</strong> : créez <code>benevole@kiptrack.local</code> avec le code Pointage, puis <code>admin@kiptrack.local</code> avec le code Admin (10 caractères minimum, sans mot du dictionnaire).</li>
+            <li><strong>Authentication › Paramètres › Actions des utilisateurs</strong> : décochez « Activer la création (inscription) ».</li>
+            <li><strong>Realtime Database › Règles</strong> : remplacez tout par les règles ci-dessous, puis « Publier ».</li>
+            <li>Rechargez l'application et connectez-vous en Admin : vos données sont migrées automatiquement (une sauvegarde est téléchargée avant).</li>
+          </ol>
+          <div style="display:flex;gap:8px;align-items:center;margin:8px 0;">
+            <button class="btn btn-primary" onclick="copySecurityRules()">Copier les règles</button>
+            <span id="sec-copy-msg" style="font-size:12px;color:var(--success);"></span>
+          </div>
+          <pre id="sec-rules-pre" class="sec-rules"></pre>
+        </details>
+      </div>
+    </div>
+
     <div class="pwd-block">
-      <div class="section-title" style="margin-top:0;">Codes d'accès <span class="security-badge">Hashés (SHA-256)</span></div>
+      <div class="section-title" style="margin-top:0;">Codes d'accès <span class="security-badge" id="pwd-badge">Hashés (SHA-256)</span></div>
       <div class="pwd-row">
         <span class="pwd-label">Pointage</span>
         <input class="pwd-input form-input" id="pwd-benevole" type="text" placeholder="ex: benevole2025" autocomplete="new-password">
@@ -2372,7 +2418,7 @@ code { background: var(--surface2); }
         <input class="pwd-input form-input" id="pwd-admin" type="text" placeholder="ex: admin_secret" autocomplete="new-password">
       </div>
       <button class="btn btn-primary" style="margin-top:6px;" onclick="savePwds()">Enregistrer les codes</button>
-      <div class="pwd-note">Les spectateurs n'ont pas besoin de code. Les codes sont hashés avant d'être stockés : même en cas d'accès à la base de données, ils ne sont pas lisibles en clair.</div>
+      <div class="pwd-note" id="pwd-note">Les spectateurs n'ont pas besoin de code.</div>
     </div>
 
     <!-- RGPD & DONNÉES -->
@@ -2382,15 +2428,47 @@ code { background: var(--surface2); }
         Cette application traite des données personnelles (noms, contacts) de coureurs et bénévoles.
         En tant qu'organisateur, vous êtes responsable de traitement au sens du RGPD.
       </p>
+      <div class="vol-card">
+        <div class="section-title" style="margin-top:0;font-size:12px;">Informations légales de l'organisateur</div>
+        <div id="legal-missing" class="legal-warning" style="display:none;">Informations obligatoires manquantes : elles doivent figurer dans la politique de confidentialité (art. 13 RGPD) et les mentions légales (LCEN).</div>
+        <div class="vol-form-grid">
+          <input class="form-input" id="legal-organizer" placeholder="Organisateur (association, société…)">
+          <input class="form-input" id="legal-contactEmail" type="email" placeholder="E-mail de contact données personnelles">
+          <input class="form-input" id="legal-address" placeholder="Adresse postale de l'organisateur" style="grid-column:1/-1;">
+          <input class="form-input" id="legal-publisher" placeholder="Directeur de la publication (nom)">
+          <input class="form-input" id="legal-siteHost" placeholder="Hébergeur du site (nom, adresse, téléphone)">
+          <input class="form-input" id="legal-dataRegion" placeholder="Région de la base (ex : europe-west1, Belgique)">
+          <label class="legal-inline">Conservation <input class="form-input" id="legal-retentionMonths" type="number" min="1" max="36" style="width:70px;"> mois après l'épreuve</label>
+        </div>
+        <button class="btn btn-primary" style="margin-top:10px;" onclick="saveLegalInfo()">Enregistrer</button>
+        <div id="legal-msg" class="mm-msg"></div>
+      </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;">
         <button class="btn" onclick="openRgpdModal('policy')">Politique de confidentialité</button>
-        <button class="btn" onclick="openRgpdModal('rights')">Demandes de droits (accès / effacement)</button>
+        <button class="btn" onclick="openRgpdModal('legal')">Mentions légales</button>
+        <button class="btn" onclick="openRgpdModal('rights')">Demandes de droits</button>
+      </div>
+      <div class="vol-card">
+        <div class="section-title" style="margin-top:0;font-size:12px;">Droit d'accès et portabilité</div>
+        <p style="font-size:12px;color:var(--text3);margin-bottom:10px;">Exporte toutes les données d'un coureur (n° de dossard) ou d'un bénévole (nom) dans un fichier JSON à lui transmettre, sous un mois.</p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <input class="form-input" id="rgpd-export-query" placeholder="N° de dossard ou nom du bénévole" style="max-width:260px;" onkeydown="if(event.key==='Enter')exportPersonData()">
+          <button class="btn" onclick="exportPersonData()">Exporter</button>
+        </div>
+        <div id="rgpd-export-msg" class="mm-msg"></div>
+      </div>
+      <div class="vol-card">
+        <div class="section-title" style="margin-top:0;font-size:12px;">Fin de conservation</div>
+        <div id="retention-status" style="font-size:12.5px;margin-bottom:10px;"></div>
+        <p style="font-size:12px;color:var(--text3);margin-bottom:10px;">Supprime les noms des coureurs, les fiches des bénévoles et les fils de discussion. Les dossards, catégories et temps sont conservés de façon anonyme.</p>
+        <button class="btn" style="border-color:var(--error);color:var(--error);" onclick="purgePersonalData()">Anonymiser toutes les données personnelles</button>
+        <div id="purge-msg" class="mm-msg"></div>
       </div>
       <div class="vol-card" style="margin-bottom:0;">
         <div class="section-title" style="margin-top:0;font-size:12px;">Effacement de données</div>
         <p style="font-size:12px;color:var(--text3);margin-bottom:10px;">
-          Supprime définitivement les données personnelles d'un coureur ou bénévole (nom, contact),
-          tout en conservant l'historique anonymisé des temps de passage pour les statistiques de course.
+          Opposition à la publication ou demande d'effacement d'un coureur : son nom est supprimé, il n'apparaît plus que par son dossard.
+          Pour un bénévole, utilisez 🗑 dans Bénévoles › Liste &amp; pointage.
         </p>
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
           <input class="form-input" id="erase-bib-input" type="number" placeholder="N° dossard à effacer" style="max-width:160px;">
@@ -2526,6 +2604,11 @@ code { background: var(--surface2); }
       <button class="btn" onclick="exportCSV()">Exporter CSV</button>
     </div>
   </div>
+  <footer class="app-legal-footer">
+    <a onclick="openRgpdModal('legal')">Mentions légales</a> ·
+    <a onclick="openRgpdModal('policy')">Confidentialité</a> ·
+    <a onclick="openRgpdModal('rights')">Vos droits</a>
+  </footer>
 </div>
 
 <!-- BCR MODAL -->
@@ -2767,12 +2850,30 @@ function showScreen(name) {
   document.getElementById('screen-app').style.display = name === 'app' ? 'block' : 'none';
 }
 
-function startApp() { showScreen('login'); loadStateFromDB(); }
+async function startApp() { await detectSecureMode(); showScreen('login'); setRole(loginRole); loadStateFromDB(); }
 
 // ═══════════════════════════════════════════════
 // DATABASE
 // ═══════════════════════════════════════════════
 function dbRef(path) { if (useLocal) return null; return db ? db.ref(path) : null; }
+
+function parseLegacyRace(data) {
+  return {
+    raceName: data.raceName || '',
+    raceDate: data.raceDate || '', raceStartTime: data.raceStartTime || null,
+    checkpoints: data.checkpoints ? Object.values(data.checkpoints).sort((a,b)=>a.km-b.km) : [],
+    passages: data.passages || {},
+    runners: data.runners || {},
+    passwords: data.passwords || { benevole: '', admin: '' },
+    passwordHashes: data.passwordHashes || { benevole: '', admin: '' },
+    formats: data.formats ? (Array.isArray(data.formats) ? data.formats : Object.values(data.formats)) : [],
+    mapImage: data.mapImage || null,
+    raceLogo: data.raceLogo || null,
+    legal: data.legal || {},
+    missions: data.missions || {},
+    volunteers: data.volunteers || {}
+  };
+}
 
 function loadStateFromDB() {
   if (useLocal) {
@@ -2780,26 +2881,12 @@ function loadStateFromDB() {
     migratePlaintextPasswords();
     applyState(); return;
   }
+  if (secureDb) { secureStartPublic(); return; }
   const ref = dbRef('race');
   if (!ref) return;
   ref.on('value', snap => {
     const data = snap.val();
-    if (data) {
-      state = {
-        raceName: data.raceName || '',
-        raceDate: data.raceDate || '', raceStartTime: data.raceStartTime || null,
-        checkpoints: data.checkpoints ? Object.values(data.checkpoints).sort((a,b)=>a.km-b.km) : [],
-        passages: data.passages || {},
-        runners: data.runners || {},
-        passwords: data.passwords || { benevole: '', admin: '' },
-        passwordHashes: data.passwordHashes || { benevole: '', admin: '' },
-        formats: data.formats ? (Array.isArray(data.formats) ? data.formats : Object.values(data.formats)) : [],
-        mapImage: data.mapImage || null,
-        raceLogo: data.raceLogo || null,
-        missions: data.missions || {},
-        volunteers: data.volunteers || {}
-      };
-    }
+    if (data) state = parseLegacyRace(data);
     migratePlaintextPasswords();
     applyState();
   });
@@ -2819,6 +2906,7 @@ async function hashCode(code, salt) {
 // One-time migration: if a legacy plaintext password exists but no hash yet,
 // hash it silently and clear the plaintext field.
 async function migratePlaintextPasswords() {
+  if (secureDb) return;
   let changed = false;
   if (!state.passwordHashes) state.passwordHashes = { benevole: '', admin: '' };
   for (const role of ['benevole','admin']) {
@@ -2833,6 +2921,7 @@ async function migratePlaintextPasswords() {
 
 function saveState() {
   if (useLocal) { try { localStorage.setItem('race_state', JSON.stringify(state)); } catch(e){} return; }
+  if (secureDb) { secureSave(); return; }
   const ref = dbRef('race');
   if (!ref) return;
   const cpObj = {};
@@ -2844,10 +2933,483 @@ function saveState() {
     formats: state.formats || [],
     mapImage: state.mapImage || null,
     raceLogo: state.raceLogo || null,
+    legal: state.legal || null,
     missions: state.missions || {},
     volunteers: state.volunteers || {}
   });
 }
+// ═══════════════════════════════════════════════
+// SÉCURITÉ FIREBASE — authentification, données cloisonnées, règles
+// ═══════════════════════════════════════════════
+// Mode sécurisé (activé automatiquement dès que les règles sont en place) :
+//  - les codes Pointage / Admin sont les mots de passe de deux comptes
+//    Firebase Authentication, vérifiés par Google (plus de vérification locale) ;
+//  - les données sont cloisonnées :
+//      public/           classement (lecture libre, écriture équipe/admin)
+//      staff/            missions, bénévoles (équipe connectée uniquement)
+//      admin/            coordonnées des bénévoles (admin uniquement)
+//      missionComments/  fils de discussion (équipe connectée)
+//      missionFileData/  contenu des fiches (équipe connectée)
+//  - chaque enregistrement n'écrit que ce qui a changé (plus d'écrasement
+//    entre bénévoles qui flashent en même temps).
+
+const STAFF_EMAILS = { admin: 'admin@kiptrack.local', benevole: 'benevole@kiptrack.local' };
+let secureDb = false;
+let secureCache = { pub: null, staff: null, adm: null };
+let secureUnsubs = { pub: null, staff: null, adm: null };
+let secureLastSynced = {};   // chemin -> JSON tel que présent sur le serveur
+let secureLoaded = { pub: false, staff: false, adm: false };
+
+async function detectSecureMode() {
+  secureDb = false;
+  if (useLocal || !db) return;
+  try {
+    const s = await db.ref('public/meta').once('value');
+    if (s.exists()) { secureDb = true; return; }
+  } catch (e) { secureDb = true; return; }
+  try { await db.ref('race').once('value'); secureDb = false; }   // lisible par tous = base encore ouverte
+  catch (e) { secureDb = true; }                                  // refusé = règles sécurisées en place
+}
+
+// Normalise une valeur comme Firebase la stocke (null/undefined supprimés)
+function normUnit(v) {
+  if (v === null || v === undefined) return null;
+  const out = JSON.parse(JSON.stringify(v, (k, x) => (x === null ? undefined : x)));
+  if (out && typeof out === 'object' && !Object.keys(out).length) return null;
+  return out;
+}
+
+// Découpe l'état en "unités" enregistrées séparément
+function secureUnits(st) {
+  const u = {};
+  const put = (p, v) => { const n = normUnit(v); if (n !== null) u[p] = n; };
+  put('public/meta', { raceName: st.raceName || '', raceDate: st.raceDate || '', raceStartTime: st.raceStartTime || null });
+  (st.checkpoints || []).forEach(cp => put('public/checkpoints/' + cp.id, cp));
+  put('public/formats', (st.formats || []).length ? st.formats : null);
+  Object.entries(st.passages || {}).forEach(([bib, cps]) => Object.entries(cps || {}).forEach(([cp, p]) => put(`public/passages/${bib}/${cp}`, p)));
+  Object.entries(st.runners || {}).forEach(([bib, r]) => put('public/runners/' + bib, r));
+  put('public/mapImage', st.mapImage || null);
+  put('public/raceLogo', st.raceLogo || null);
+  put('public/legal', st.legal || null);
+  Object.entries(st.missions || {}).forEach(([id, m]) => put('staff/missions/' + id, m));
+  Object.entries(st.volunteers || {}).forEach(([id, v]) => {
+    const { phone, email, consentAt, ...rest } = v || {};
+    put('staff/volunteers/' + id, rest);
+    put('admin/volunteerContacts/' + id, { phone: phone || null, email: email || null, consentAt: consentAt || null });
+  });
+  return u;
+}
+function serializeUnits(u) { const o = {}; for (const k in u) o[k] = JSON.stringify(u[k]); return o; }
+
+// Ce que le rôle courant a le droit d'écrire (miroir des règles, pour ne jamais envoyer
+// une écriture refusée : une mise à jour groupée est rejetée en bloc si un seul chemin l'est)
+function secureCanWrite(path, val) {
+  if (currentRole === 'admin') return true;
+  if (currentRole !== 'benevole') return false;
+  if (path.startsWith('public/passages/')) return true;
+  if (path.startsWith('staff/volunteers/')) return val !== null;
+  if (path.startsWith('admin/volunteerContacts/')) return val !== null && !(path in secureLastSynced);
+  return false;
+}
+
+function secureSave() {
+  if (!db) return;
+  const cur = secureUnits(state);
+  const upd = {};
+  for (const [p, v] of Object.entries(cur)) {
+    if (secureLastSynced[p] !== JSON.stringify(v) && secureCanWrite(p, v)) upd[p] = v;
+  }
+  for (const p of Object.keys(secureLastSynced)) {
+    if (!(p in cur) && secureCanWrite(p, null)) upd[p] = null;
+  }
+  if (!Object.keys(upd).length) return;
+  for (const [p, v] of Object.entries(upd)) { if (v === null) delete secureLastSynced[p]; else secureLastSynced[p] = JSON.stringify(v); }
+  db.ref().update(upd).catch(e => {
+    console.error('Écriture refusée', e, Object.keys(upd));
+    if (typeof showConfirm === 'function') showConfirm('Enregistrement refusé par la base (droits insuffisants ou session expirée). Reconnectez-vous.', true);
+    secureRebuild();
+  });
+}
+
+function secureRebuild() {
+  const pub = secureCache.pub || {};
+  const meta = pub.meta || {};
+  const staff = secureCache.staff || {};
+  const contacts = (secureCache.adm || {}).volunteerContacts || {};
+  const volunteers = {};
+  Object.entries(staff.volunteers || {}).forEach(([id, v]) => { volunteers[id] = { ...v, ...(contacts[id] || {}) }; });
+  state = {
+    raceName: meta.raceName || '', raceDate: meta.raceDate || '', raceStartTime: meta.raceStartTime || null,
+    checkpoints: pub.checkpoints ? Object.values(pub.checkpoints).sort((a, b) => a.km - b.km) : [],
+    passages: pub.passages || {}, runners: pub.runners || {},
+    passwords: { benevole: '', admin: '' }, passwordHashes: { benevole: '', admin: '' },
+    formats: pub.formats ? (Array.isArray(pub.formats) ? pub.formats : Object.values(pub.formats)) : [],
+    mapImage: pub.mapImage || null, raceLogo: pub.raceLogo || null, legal: pub.legal || {},
+    missions: staff.missions || {}, volunteers
+  };
+  // Ce que le serveur contient (pour les zones lisibles par ce rôle)
+  secureLastSynced = serializeUnits(secureUnits(state));
+  applyState();
+}
+
+function secureListen(key, path) {
+  if (secureUnsubs[key]) return;
+  const ref = db.ref(path);
+  const h = ref.on('value', s => { secureCache[key] = s.val(); secureLoaded[key] = true; secureRebuild(); },
+    e => { console.warn('Lecture refusée : ' + path, e.message); secureCache[key] = null; });
+  secureUnsubs[key] = () => ref.off('value', h);
+}
+function secureUnlisten(key) {
+  if (secureUnsubs[key]) { secureUnsubs[key](); secureUnsubs[key] = null; }
+  secureCache[key] = null; secureLoaded[key] = false;
+}
+function secureStartPublic() { secureListen('pub', 'public'); }
+function secureStartStaff(role) {
+  secureListen('staff', 'staff');
+  if (role === 'admin') secureListen('adm', 'admin');
+}
+function secureStopStaff() {
+  secureUnlisten('staff'); secureUnlisten('adm');
+  if (secureDb) secureRebuild();   // on retire de la mémoire les données de l'équipe
+}
+
+function secureAuthMessage(e, role) {
+  const c = (e && e.code) || '';
+  if (/wrong-password|invalid-credential|invalid-login-credentials|user-not-found/.test(c))
+    return `Code incorrect (ou compte ${STAFF_EMAILS[role]} pas encore créé dans Firebase).`;
+  if (/too-many-requests/.test(c)) return 'Trop de tentatives. Patientez quelques minutes avant de réessayer.';
+  if (/operation-not-allowed/.test(c)) return "La connexion par e-mail/mot de passe n'est pas activée dans Firebase Authentication.";
+  if (/network-request-failed/.test(c)) return 'Pas de connexion réseau.';
+  return 'Connexion impossible : ' + (e.message || c);
+}
+
+async function secureLogin(role, pwd) {
+  const errEl = document.getElementById('login-error');
+  if (!pwd) { errEl.textContent = 'Saisissez votre code.'; return; }
+  errEl.style.color = 'var(--text3)'; errEl.textContent = 'Connexion…';
+  try {
+    await firebase.auth().setPersistence(firebase.auth.Auth.Persistence.SESSION);
+    await firebase.auth().signInWithEmailAndPassword(STAFF_EMAILS[role], pwd);
+  } catch (e) {
+    errEl.style.color = ''; errEl.textContent = secureAuthMessage(e, role); return;
+  }
+  errEl.style.color = ''; errEl.textContent = '';
+  if (role === 'admin') missionAdminSecret = pwd;
+  enterApp(role);
+  secureStartStaff(role);
+  if (role === 'admin') secureMaybeMigrate();
+}
+
+async function secureSignOut() {
+  secureStopStaff();
+  try { if (firebase.auth && firebase.auth().currentUser) await firebase.auth().signOut(); } catch (e) {}
+}
+
+function downloadJSON(obj, filename) {
+  const blob = new Blob([JSON.stringify(obj, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = filename;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 30000);
+}
+
+// Première connexion admin sur une base sécurisée : crée la structure,
+// ou migre les anciennes données du nœud "race".
+async function secureMaybeMigrate() {
+  // Attendre la première lecture du nœud public
+  for (let i = 0; i < 50 && !secureLoaded.pub; i++) await new Promise(r => setTimeout(r, 100));
+  if (secureCache.pub && secureCache.pub.meta) return;
+  let legacy = null;
+  try { legacy = (await db.ref('race').once('value')).val(); } catch (e) { legacy = null; }
+  if (!legacy) { secureLastSynced = {}; saveState(); return; }
+  if (!confirm("Des données de l'ancienne structure (non sécurisée) ont été trouvées.\n\nLes migrer maintenant vers la structure sécurisée ? Une sauvegarde JSON va être téléchargée avant la migration.")) return;
+  downloadJSON(legacy, 'kiptrack_sauvegarde_avant_migration_' + new Date().toISOString().slice(0, 10) + '.json');
+  const migrated = parseLegacyRace(legacy);
+  migrated.passwords = { benevole: '', admin: '' }; migrated.passwordHashes = { benevole: '', admin: '' };
+  state = migrated;
+  secureLastSynced = {};
+  const upd = secureUnits(state);
+  try {
+    await db.ref().update(upd);
+    await db.ref('race').remove();
+    alert('✓ Migration terminée. Les anciennes données non sécurisées ont été supprimées de la base.');
+  } catch (e) {
+    alert('La migration a échoué : ' + e.message + '\nVos données sont intactes (ancienne structure) et une sauvegarde a été téléchargée.');
+  }
+}
+
+// ── Règles de sécurité à coller dans la console Firebase ──
+function buildSecurityRules() {
+  const A = `auth != null && auth.token.email === '${STAFF_EMAILS.admin}'`;
+  const S = `auth != null && (auth.token.email === '${STAFF_EMAILS.admin}' || auth.token.email === '${STAFF_EMAILS.benevole}')`;
+  return JSON.stringify({ rules: {
+    '.read': false,
+    '.write': false,
+    public: {
+      '.read': true,
+      meta: { '.write': A },
+      checkpoints: { '.write': A },
+      formats: { '.write': A },
+      runners: { '.write': A, '$bib': { '.validate': '$bib.matches(/^[0-9]{1,6}$/)' } },
+      passages: {
+        '.write': A,
+        '$bib': {
+          '.write': S,
+          '.validate': '$bib.matches(/^[0-9]{1,6}$/)',
+          '$cp': { '.validate': "newData.child('ts').isNumber() && newData.child('ts').val() < now + 86400000" }
+        }
+      },
+      mapImage: { '.write': A },
+      raceLogo: { '.write': A },
+      legal: { '.write': A },
+      '$other': { '.validate': false }
+    },
+    staff: {
+      '.read': S,
+      missions: { '.write': A },
+      volunteers: {
+        '.write': A,
+        '$vid': { '.write': `${S} && newData.exists() && (!data.exists() || newData.child('missionId').val() === data.child('missionId').val())` }
+      },
+      '$other': { '.validate': false }
+    },
+    admin: {
+      '.read': A,
+      '.write': A,
+      volunteerContacts: { '$vid': { '.write': `${S} && !data.exists() && newData.exists()` } }
+    },
+    missionComments: {
+      '.read': S,
+      '.write': A,
+      '$mid': { '$cid': {
+        '.write': `${S} && !data.exists()`,
+        '.validate': `newData.child('at').isNumber() && newData.child('role').val() === (auth.token.email === '${STAFF_EMAILS.admin}' ? 'admin' : 'benevole') && ((newData.child('text').isString() && newData.child('text').val().length <= 2000 && newData.child('author').isString() && newData.child('author').val().length <= 60) || newData.child('enc').exists())`
+      } }
+    },
+    missionFileData: { '.read': S, '.write': A },
+    race: { '.read': A, '.write': A }
+  } }, null, 2);
+}
+
+function copySecurityRules() {
+  const txt = buildSecurityRules();
+  const done = () => { const m = document.getElementById('sec-copy-msg'); if (m) { m.textContent = '✓ Règles copiées'; setTimeout(() => m.textContent = '', 3000); } };
+  if (navigator.clipboard) navigator.clipboard.writeText(txt).then(done, () => {});
+  else { const t = document.getElementById('sec-rules-pre'); const r = document.createRange(); r.selectNodeContents(t); getSelection().removeAllRanges(); getSelection().addRange(r); document.execCommand('copy'); done(); }
+}
+
+function renderSecurityStatus() {
+  const el = document.getElementById('sec-status');
+  if (!el) return;
+  let html;
+  if (useLocal) {
+    html = `<div class="sec-state neutral"><strong>Mode local</strong> — les données restent sur cet appareil, rien n'est envoyé en ligne.</div>`;
+  } else if (secureDb) {
+    html = `<div class="sec-state ok"><strong>✓ Base sécurisée</strong> — connexion par Firebase Authentication, données cloisonnées :
+      le public ne voit que le classement, les coordonnées des bénévoles sont réservées à l'admin.</div>`;
+  } else {
+    html = `<div class="sec-state bad"><strong>⚠ Base NON sécurisée</strong> — toutes les données (y compris noms et téléphones des bénévoles)
+      sont lisibles et modifiables par quiconque connaît l'adresse de la base. Suivez les étapes ci-dessous.</div>`;
+  }
+  el.innerHTML = html;
+  const steps = document.getElementById('sec-setup');
+  if (steps) steps.style.display = useLocal ? 'none' : '';
+  const pre = document.getElementById('sec-rules-pre');
+  if (pre && !pre.textContent) pre.textContent = buildSecurityRules();
+  const note = document.getElementById('pwd-note');
+  const badge = document.getElementById('pwd-badge');
+  if (note && badge) {
+    if (secureDb) {
+      badge.textContent = 'Firebase Authentication';
+      note.innerHTML = `Les codes sont les mots de passe des comptes <code>${STAFF_EMAILS.benevole}</code> et <code>${STAFF_EMAILS.admin}</code>, vérifiés par Google.
+        Vous pouvez changer ici le code admin (10 caractères minimum conseillés). Le code Pointage se change dans la console Firebase : Authentication › Utilisateurs.`;
+    } else {
+      badge.textContent = 'Hashés (SHA-256)';
+      note.textContent = "Les spectateurs n'ont pas besoin de code. Tant que la base n'est pas sécurisée, ces codes ne protègent que l'interface, pas les données.";
+    }
+  }
+}
+
+// ═══════════════════════════════════════════════
+// CONFORMITÉ — RGPD, loi Informatique et Libertés, LCEN
+// ═══════════════════════════════════════════════
+const LEGAL_FIELDS = ['organizer', 'address', 'contactEmail', 'publisher', 'siteHost', 'dataRegion', 'retentionMonths'];
+
+function getLegal() {
+  const l = state.legal || {};
+  return { ...l, retentionMonths: parseInt(l.retentionMonths) || 12 };
+}
+function legalMissing() {
+  const l = getLegal();
+  return ['organizer', 'address', 'contactEmail', 'publisher', 'siteHost'].filter(k => !(l[k] || '').trim());
+}
+function fillLegalForm() {
+  const l = getLegal();
+  LEGAL_FIELDS.forEach(k => { const e = document.getElementById('legal-' + k); if (e && document.activeElement !== e) e.value = l[k] || (k === 'retentionMonths' ? 12 : ''); });
+  renderRetentionStatus();
+  const miss = legalMissing();
+  const w = document.getElementById('legal-missing');
+  if (w) w.style.display = miss.length ? '' : 'none';
+  document.querySelectorAll('.retention-months').forEach(e => e.textContent = getLegal().retentionMonths);
+}
+function saveLegalInfo() {
+  const l = {};
+  LEGAL_FIELDS.forEach(k => { const e = document.getElementById('legal-' + k); l[k] = e ? e.value.trim() : ''; });
+  l.retentionMonths = Math.min(36, Math.max(1, parseInt(l.retentionMonths) || 12));
+  state.legal = l;
+  saveState();
+  fillLegalForm();
+  const m = document.getElementById('legal-msg');
+  if (m) { m.style.color = 'var(--success)'; m.textContent = '✓ Informations enregistrées — elles apparaissent dans la politique de confidentialité et les mentions légales.'; }
+}
+
+function retentionDeadline() {
+  if (!state.raceDate) return null;
+  const d = new Date(state.raceDate + 'T00:00:00');
+  if (isNaN(d)) return null;
+  d.setMonth(d.getMonth() + getLegal().retentionMonths);
+  return d;
+}
+function renderRetentionStatus() {
+  const el = document.getElementById('retention-status');
+  if (!el) return;
+  const dl = retentionDeadline();
+  if (!dl) { el.innerHTML = '<span style="color:var(--warning);">Renseignez la date de la course pour calculer la date limite de conservation.</span>'; return; }
+  const fmt = dl.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+  const days = Math.ceil((dl - new Date()) / 86400000);
+  el.innerHTML = days <= 0
+    ? `<span style="color:var(--error);font-weight:700;">⚠ Date limite dépassée (${fmt}) : anonymisez les données personnelles dès maintenant.</span>`
+    : days <= 30
+      ? `<span style="color:var(--warning);font-weight:600;">Date limite de conservation : ${fmt} (dans ${days} jours).</span>`
+      : `Date limite de conservation : <strong>${fmt}</strong>.`;
+}
+
+// Anonymisation de fin de conservation : garde les dossards, formats, catégories et temps
+async function purgePersonalData() {
+  if (!confirm("Anonymiser toutes les données personnelles ?\n\n• Noms et prénoms des coureurs supprimés (dossards, catégories et temps conservés)\n• Fiches des bénévoles supprimées (noms, contacts, affectations)\n• Fils de discussion des missions supprimés\n\nCette action est irréversible.")) return;
+  Object.keys(state.runners || {}).forEach(bib => {
+    const r = state.runners[bib];
+    state.runners[bib] = typeof r === 'object' && r ? { ageCategory: r.ageCategory || null, format: r.format || null } : { format: null };
+    if (!state.runners[bib].ageCategory && !state.runners[bib].format) delete state.runners[bib];
+  });
+  state.volunteers = {};
+  saveState();
+  try { await extSet('missionComments', null); } catch (e) {}
+  const m = document.getElementById('purge-msg');
+  if (m) { m.style.color = 'var(--success)'; m.textContent = '✓ Données personnelles anonymisées. Les temps de passage restent disponibles de façon anonyme.'; }
+  applyState();
+}
+
+// Droit d'accès / portabilité (art. 15 et 20 RGPD)
+function exportPersonData() {
+  const q = (document.getElementById('rgpd-export-query').value || '').trim();
+  const msg = document.getElementById('rgpd-export-msg');
+  if (!q) return;
+  const out = { exportDate: new Date().toISOString(), course: state.raceName || '', responsableDeTraitement: getLegal().organizer || '' };
+  if (/^\d+$/.test(q) && (state.runners[q] || state.passages[q])) {
+    out.coureur = { dossard: q, ...(state.runners[q] || {}) };
+    out.passages = Object.entries(state.passages[q] || {}).map(([cpId, p]) => {
+      const cp = state.checkpoints.find(c => c.id === cpId);
+      return { point: cp ? `Km ${cp.km} — ${cp.name}` : cpId, heure: p.time, horodatage: new Date(p.ts).toISOString() };
+    });
+  } else {
+    const ql = q.toLowerCase();
+    const vols = Object.entries(state.volunteers || {}).filter(([, v]) => (v.name || '').toLowerCase().includes(ql));
+    if (!vols.length) { msg.style.color = 'var(--error)'; msg.textContent = 'Aucun coureur ni bénévole trouvé.'; return; }
+    out.benevoles = vols.map(([id, v]) => {
+      const name = (v.name || '').toLowerCase();
+      const comments = [];
+      Object.entries(missionComments || {}).forEach(([mid, items]) => Object.values(items || {}).forEach(c => {
+        const body = c.enc ? null : c;
+        if (body && (body.author || '').toLowerCase() === name) comments.push({ mission: missionInfo(mid) ? missionInfo(mid).name : mid, date: new Date(c.at).toISOString(), texte: body.text });
+      }));
+      return {
+        nom: v.name, telephone: v.phone || '', email: v.email || '',
+        mission: v.missionId && state.missions[v.missionId] ? missionInfo(v.missionId).name : '',
+        statut: v.status, confirme: !!v.confirmed,
+        presence: v.present === true ? 'présent' : v.present === false ? 'absent' : 'non pointé',
+        inscritLe: v.registeredAt || '', consentementRecueilliLe: v.consentAt || '',
+        commentairesPublies: comments
+      };
+    });
+  }
+  downloadJSON(out, 'donnees_personnelles_' + q.replace(/[^a-z0-9]+/gi, '_') + '.json');
+  msg.style.color = 'var(--success)'; msg.textContent = '✓ Export téléchargé — à transmettre à la personne concernée.';
+}
+
+// ── Textes d'information ──────────────────────────
+function lv(v, placeholder) {
+  return (v || '').trim() ? esc(v) : `<span class="legal-todo">[${placeholder} — à compléter par l'organisateur]</span>`;
+}
+function buildPolicyHtml() {
+  const l = getLegal();
+  const dl = retentionDeadline();
+  const region = (l.dataRegion || '').trim() || 'Union européenne (région europe-west1, Belgique)';
+  return `
+  <p><strong>Responsable de traitement</strong></p>
+  <p>${lv(l.organizer, "Nom de l'organisateur")}, ${lv(l.address, 'Adresse')}.<br>Contact pour vos données : ${l.contactEmail ? `<a href="mailto:${esc(l.contactEmail)}">${esc(l.contactEmail)}</a>` : lv('', 'E-mail de contact')}.</p>
+
+  <p style="margin-top:12px;"><strong>Données traitées, finalités et bases légales</strong></p>
+  <p><em>Coureurs</em> — numéro de dossard, nom, prénom, catégorie, format de course, heures de passage aux points de contrôle.
+  Finalités : chronométrage, sécurité des coureurs sur le parcours et publication du classement en direct.
+  Base légale : exécution de votre inscription à l'épreuve (art. 6.1.b RGPD) et intérêt légitime de l'organisateur à publier les résultats (art. 6.1.f).
+  Le classement est public ; vous pouvez vous opposer à la publication de votre nom (il sera alors remplacé par votre seul numéro de dossard).</p>
+  <p style="margin-top:6px;"><em>Bénévoles</em> — nom, téléphone, e-mail, mission, statut, confirmation, présence, messages publiés dans les fils de discussion.
+  Finalité : organisation et coordination des équipes. Base légale : exécution de votre engagement bénévole (art. 6.1.b).
+  Vos coordonnées ne sont accessibles qu'à l'organisation (compte administrateur), pas aux autres bénévoles.</p>
+  <p style="margin-top:6px;"><em>Spectateurs</em> — aucune donnée personnelle n'est collectée.</p>
+
+  <p style="margin-top:12px;"><strong>Stockage sur votre appareil</strong></p>
+  <p>L'application enregistre dans votre navigateur (stockage local) uniquement des éléments nécessaires à son fonctionnement : préférences d'affichage, favoris,
+  nom saisi pour les commentaires, codes de missions confidentielles, session de connexion. Conformément à l'article 82 de la loi Informatique et Libertés,
+  ces traceurs strictement nécessaires ne requièrent pas de consentement. Aucun traceur publicitaire ni outil de mesure d'audience n'est utilisé.</p>
+
+  <p style="margin-top:12px;"><strong>Destinataires et sous-traitants</strong></p>
+  <p>Seuls l'organisateur et les bénévoles habilités accèdent aux données non publiques. Les données sont hébergées par Google (Firebase Realtime Database et Firebase Authentication),
+  sous-traitant au sens de l'article 28 du RGPD, dans la zone : ${esc(region)}. Google peut accéder à certaines données depuis des pays hors de l'Union européenne ;
+  ces transferts sont encadrés par le Data Privacy Framework UE–États-Unis et les clauses contractuelles types de la Commission européenne.
+  L'affichage de la carte du parcours interroge les serveurs d'OpenStreetMap, et certaines bibliothèques techniques sont chargées depuis Google et Cloudflare : ces services reçoivent votre adresse IP.
+  Aucune donnée n'est vendue ni cédée à des fins commerciales.</p>
+
+  <p style="margin-top:12px;"><strong>Durée de conservation</strong></p>
+  <p>Les données nominatives sont conservées ${getLegal().retentionMonths} mois après l'épreuve${dl ? `, soit jusqu'au ${dl.toLocaleDateString('fr-FR')}` : ''}, puis anonymisées :
+  seuls les numéros de dossard et les temps de passage sont conservés, à des fins statistiques.</p>
+
+  <p style="margin-top:12px;"><strong>Sécurité</strong></p>
+  <p>Accès de l'équipe protégé par authentification, cloisonnement des données selon les rôles, chiffrement des missions confidentielles, connexion chiffrée (HTTPS).</p>
+
+  <p style="margin-top:12px;"><strong>Vos droits</strong></p>
+  <p>Vous disposez des droits d'accès, de rectification, d'effacement, de limitation, d'opposition et de portabilité (articles 15 à 21 du RGPD),
+  ainsi que du droit de définir des directives relatives au sort de vos données après votre décès. Pour les exercer, écrivez à
+  ${l.contactEmail ? `<a href="mailto:${esc(l.contactEmail)}">${esc(l.contactEmail)}</a>` : lv('', 'E-mail de contact')}. Une réponse vous sera apportée dans un délai d'un mois.
+  Si vous estimez que vos droits ne sont pas respectés, vous pouvez adresser une réclamation à la CNIL (www.cnil.fr, 3 place de Fontenoy, TSA 80715, 75334 Paris Cedex 07).</p>`;
+}
+
+function buildRightsHtml() {
+  const l = getLegal();
+  return `
+  <p>Pour toute demande concernant vos données (coureur ou bénévole) : accès, copie, rectification, effacement, opposition à la publication de votre nom dans le classement, écrivez à
+  ${l.contactEmail ? `<a href="mailto:${esc(l.contactEmail)}">${esc(l.contactEmail)}</a>` : lv('', 'E-mail de contact')} en précisant votre numéro de dossard ou votre nom de bénévole.</p>
+  <p style="margin-top:10px;">L'organisateur dispose dans l'application des outils nécessaires : export de vos données (format JSON, lisible et réutilisable),
+  effacement de votre nom tout en conservant vos temps de façon anonyme, suppression de votre fiche bénévole.</p>
+  <p style="margin-top:10px;">Une réponse vous sera apportée dans un délai d'un mois. En cas de difficulté, vous pouvez saisir la CNIL : www.cnil.fr.</p>`;
+}
+
+function buildLegalNoticeHtml() {
+  const l = getLegal();
+  return `
+  <p><strong>Éditeur du site</strong></p>
+  <p>${lv(l.organizer, "Nom de l'organisateur (association, société…)")}<br>${lv(l.address, 'Adresse')}<br>Contact : ${l.contactEmail ? `<a href="mailto:${esc(l.contactEmail)}">${esc(l.contactEmail)}</a>` : lv('', 'E-mail')}</p>
+  <p style="margin-top:10px;"><strong>Directeur de la publication</strong></p>
+  <p>${lv(l.publisher, 'Nom du directeur de la publication')}</p>
+  <p style="margin-top:10px;"><strong>Hébergement</strong></p>
+  <p>Site : ${lv(l.siteHost, "Nom, adresse et téléphone de l'hébergeur du site")}<br>
+  Base de données : Google Ireland Limited (Firebase), Gordon House, Barrow Street, Dublin 4, Irlande.</p>
+  <p style="margin-top:10px;"><strong>Données personnelles</strong></p>
+  <p>Voir la <a onclick="openRgpdModal('policy')">politique de confidentialité</a>.</p>
+  <p style="margin-top:10px;font-size:11px;color:var(--text3);">Mentions établies en application de l'article 6-III de la loi n° 2004-575 du 21 juin 2004 pour la confiance dans l'économie numérique (LCEN).</p>`;
+}
+
 
 // ═══════════════════════════════════════════════
 // LOGIN
@@ -2864,13 +3426,15 @@ function setRole(role) {
   document.getElementById('login-error').style.color = '';
   document.getElementById('login-input').value = '';
   document.getElementById('login-reset').style.display = 'none';
-  document.getElementById('login-reset-row').style.display = (role === 'spectateur') ? 'none' : 'block';
+  document.getElementById('login-reset-row').style.display = (role === 'spectateur' || secureDb) ? 'none' : 'block';
+  if (secureDb && role !== 'spectateur') document.getElementById('login-hint').textContent += " Code oublié : l'organisateur peut le réinitialiser dans la console Firebase.";
 }
 
 async function doLogin() {
   const pwd = (document.getElementById('login-input').value||'').trim();
-  if (loginRole==='spectateur') { enterApp('spectateur'); return; }
+  if (loginRole==='spectateur') { if (secureDb) await secureSignOut(); enterApp('spectateur'); return; }
   const role = loginRole; // 'benevole' (pointage) or 'admin'
+  if (!useLocal && secureDb) { await secureLogin(role, pwd); return; }
   const hashes = state.passwordHashes || {};
   const keepAdminSecret = () => { if (role === 'admin') missionAdminSecret = hashes.admin ? pwd : ''; };
   // No code configured yet for this role → allow access (first-time setup)
@@ -2890,7 +3454,7 @@ async function doLogin() {
     }
   }
   document.getElementById('login-error').textContent = 'Code incorrect.';
-  document.getElementById('login-reset-row').style.display = 'block';
+  document.getElementById('login-reset-row').style.display = secureDb ? 'none' : 'block';
 }
 
 // ═══════════════════════════════════════════════
@@ -2908,6 +3472,7 @@ function fbProjectId() {
 }
 
 function openCodeReset() {
+  if (secureDb) return;
   const proof = fbProjectId();
   const block = document.getElementById('login-reset-proof-block');
   document.getElementById('login-reset-body').textContent = proof
@@ -2975,7 +3540,7 @@ function enterApp(role) {
   maybeShowRgpdBanner();
 }
 
-function doLogout() { closeMissionModal(); stopMissionCommentsListener(); missionAdminSecret = null; missionKeys = {}; missionPlain = {}; missionPlainSig = {}; missionDecryptedComments = {}; missionKdfCache.clear(); currentRole='spectateur'; showScreen('login'); setRole('spectateur'); document.getElementById('login-input').value=''; }
+function doLogout() { if (secureDb) secureSignOut(); closeMissionModal(); stopMissionCommentsListener(); missionAdminSecret = null; clearMissionSession(); missionKdfCache.clear(); currentRole='spectateur'; showScreen('login'); setRole('spectateur'); document.getElementById('login-input').value=''; }
 
 // ═══════════════════════════════════════════════
 // APPLY STATE
@@ -3009,6 +3574,7 @@ function applyState() {
   renderMissionList(); renderVolunteerList(); updateVolunteerStats();
   updateVolMissionSelects();
   refreshMissionKeys().then(changed => { if (changed) { refreshMissionViews(); renderVolunteerList(); } });
+  fillLegalForm(); renderSecurityStatus();
   renderCourseSection();
 }
 
@@ -3026,6 +3592,20 @@ function updateRaceMeta() {
 async function savePwds() {
   const newBenevole = document.getElementById('pwd-benevole').value.trim();
   const newAdmin = document.getElementById('pwd-admin').value.trim();
+  if (!useLocal && secureDb) {
+    if (newBenevole) alert("En mode sécurisé, le code Pointage se change dans la console Firebase :\nAuthentication › Utilisateurs › " + STAFF_EMAILS.benevole + " › Réinitialiser le mot de passe.\n(Voir le guide fourni.)");
+    if (newAdmin) {
+      if (newAdmin.length < 10) { alert('Le code admin doit faire au moins 10 caractères.'); return; }
+      try { await firebase.auth().currentUser.updatePassword(newAdmin); }
+      catch (e) { alert(e.code === 'auth/requires-recent-login' ? 'Par sécurité, déconnectez-vous puis reconnectez-vous avant de changer le code.' : 'Échec : ' + e.message); return; }
+      await rewrapMissionsForAdmin(newAdmin);
+      saveState();
+      alert('✓ Code admin changé.');
+    }
+    document.getElementById('pwd-benevole').value = '';
+    document.getElementById('pwd-admin').value = '';
+    return;
+  }
   if (!state.passwordHashes) state.passwordHashes = { benevole: '', admin: '' };
   if (newBenevole) state.passwordHashes.benevole = await hashCode(newBenevole, CODE_SALT);
   if (newAdmin) {
@@ -5634,6 +6214,7 @@ let missionCommentsUnsub = null;
 let missionModalId = null;
 let missionEditing = false;
 let missionDecryptedComments = {}; // commentId -> {author, text}
+const missionFileMetaCache = new Map(); // fileId -> métadonnées déchiffrées (jamais dans l'état)
 
 function esc(s) {
   return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
@@ -5687,17 +6268,28 @@ async function unwrapRaw(wrap, secret) {
   try { return await aesDec(await missionKdf(secret, wrap.salt), wrap); } catch (e) { return null; }
 }
 
-// ── Codes mémorisés sur l'appareil ────────────────
+// ── Codes saisis par l'utilisateur connecté ──────
+// Gardés pour la session uniquement (effacés à la déconnexion et à la fermeture de l'onglet),
+// et jamais enregistrés quand l'admin crée ou modifie une mission : sur un appareil partagé,
+// le bénévole suivant ne doit pas hériter des missions débloquées.
 function missionCodesKey() { return 'kt_mission_codes_' + (state.raceName || 'default').replace(/\s+/g, '_').toLowerCase(); }
-function getStoredMissionCodes() { try { return JSON.parse(localStorage.getItem(missionCodesKey()) || '{}'); } catch (e) { return {}; } }
+function getStoredMissionCodes() { try { return JSON.parse(sessionStorage.getItem(missionCodesKey()) || '{}'); } catch (e) { return {}; } }
 function storeMissionCode(id, code) {
-  try { const c = getStoredMissionCodes(); c[id] = code; localStorage.setItem(missionCodesKey(), JSON.stringify(c)); } catch (e) {}
+  try { const c = getStoredMissionCodes(); c[id] = code; sessionStorage.setItem(missionCodesKey(), JSON.stringify(c)); } catch (e) {}
+}
+function clearMissionSession() {
+  try { Object.keys(sessionStorage).filter(k => k.startsWith('kt_mission_codes_')).forEach(k => sessionStorage.removeItem(k)); } catch (e) {}
+  missionKeys = {}; missionPlain = {}; missionPlainSig = {}; missionDecryptedComments = {};
+  if (typeof missionFileMetaCache !== 'undefined') missionFileMetaCache.clear();
 }
 function forgetMissionCodes() {
-  try { localStorage.removeItem(missionCodesKey()); } catch (e) {}
-  missionKeys = {}; missionPlain = {}; missionPlainSig = {}; missionDecryptedComments = {};
-  refreshMissionKeys().then(refreshMissionViews);
+  clearMissionSession();
+  refreshMissionKeys().then(() => { refreshMissionViews(); renderVolunteerList(); });
+  const m = document.getElementById('mission-unlock-msg');
+  if (m) { m.style.color = 'var(--text3)'; m.textContent = 'Missions confidentielles verrouillées.'; }
 }
+// Anciennes versions : codes gardés durablement sur l'appareil -> on les efface
+try { Object.keys(localStorage).filter(k => k.startsWith('kt_mission_codes_')).forEach(k => localStorage.removeItem(k)); } catch (e) {}
 
 // ── Accès aux missions ────────────────────────────
 function isMissionAdmin() { return currentRole === 'admin'; }
@@ -5883,7 +6475,6 @@ async function addMission() {
     m.createdAt = new Date().toISOString();
     state.missions[id] = m;
     missionKeys[id] = key; missionPlain[id] = plain; missionPlainSig[id] = m.enc.ct;
-    storeMissionCode(id, f.code);
   } else {
     state.missions[id] = { name: f.name, needed: f.needed, start: f.start, end: f.end, location: f.location, description: f.description, createdAt: new Date().toISOString() };
   }
@@ -5920,7 +6511,6 @@ async function saveMissionEdit() {
       const built = await buildHiddenMission({ ...f }, f.code);
       Object.assign(m, built.m); delete m.name; delete m.description; delete m.location; delete m.start; delete m.end;
       missionKeys[id] = built.key; missionPlain[id] = built.plain; missionPlainSig[id] = m.enc.ct;
-      storeMissionCode(id, f.code);
     } else {
       m.needed = f.needed;
       m.enc = await encJSON(key, plain);
@@ -5931,7 +6521,6 @@ async function saveMissionEdit() {
         const raw = await findRawKey(id);
         if (!raw) return fail("Impossible de changer le code : reconnectez-vous en admin ou saisissez l'ancien code.");
         m.wrapCode = await wrapRaw(raw, f.code);
-        storeMissionCode(id, f.code);
       }
     }
   } else {
@@ -6016,7 +6605,9 @@ function renderMissionList() {
   const ids = visibleMissionIds(true).sort((a, b) => missionSortKey(a).localeCompare(missionSortKey(b)));
   const codes = getStoredMissionCodes();
   const forget = document.getElementById('mission-forget-codes');
-  if (forget) forget.style.display = Object.keys(codes).length ? '' : 'none';
+  if (forget) forget.style.display = Object.keys(codes).length && !isMissionAdmin() ? '' : 'none';
+  const unlockCard = document.getElementById('mission-unlock-card');
+  if (unlockCard) unlockCard.style.display = isMissionAdmin() ? 'none' : '';
   if (!ids.length) {
     el.innerHTML = '<div class="vol-empty"><div class="vol-empty-icon"></div>Aucune mission pour le moment.</div>';
     return;
@@ -6089,12 +6680,16 @@ function renderMissionDashboard() {
   const emptyM = ids.filter(id => stats[id].status.key === 'empty');
   const shortM = ids.filter(id => stats[id].status.key === 'short');
   const noFile = ids.filter(id => !stats[id].files);
-  const mLinks = list => list.map(id => `<a onclick="openMissionModal('${id}')">${esc(missionLabel(id))}</a>`).join(', ');
+  const chip = (label, action, title) => `<button type="button" class="dash-chip" onclick="${action}" title="${esc(title || '')}">${label}<span>›</span></button>`;
+  const mLinks = list => list.map(id => chip(esc(missionLabel(id)), `openMissionModal('${id}')`, 'Ouvrir la mission')).join('');
+  const vLinks = (list, withMission) => list.map(([vid, v]) => withMission && v.missionId && state.missions[v.missionId]
+      ? chip(`${esc(v.name)} <em>· ${esc(missionLabel(v.missionId))}</em>`, `openMissionModal('${v.missionId}')`, 'Ouvrir sa mission')
+      : chip(esc(v.name), `openVolunteerInList('${vid}')`, 'Voir dans la liste')).join('');
   if (emptyM.length) alerts.push(['danger', `${emptyM.length} mission${emptyM.length > 1 ? 's' : ''} sans aucun bénévole`, mLinks(emptyM)]);
   if (shortM.length) alerts.push(['warn', `${shortM.length} mission${shortM.length > 1 ? 's' : ''} incomplète${shortM.length > 1 ? 's' : ''}`, mLinks(shortM)]);
-  if (toConfirm.length) alerts.push(['warn', `${toConfirm.length} bénévole${toConfirm.length > 1 ? 's' : ''} affecté${toConfirm.length > 1 ? 's' : ''} à confirmer`, toConfirm.map(([, v]) => esc(v.name)).join(', ')]);
-  if (unassigned.length) alerts.push(['info', `${unassigned.length} bénévole${unassigned.length > 1 ? 's' : ''} sans mission`, unassigned.map(([, v]) => esc(v.name)).join(', ')]);
-  if (pendingVal.length) alerts.push(['info', `${pendingVal.length} inscription${pendingVal.length > 1 ? 's' : ''} en attente de validation`, pendingVal.map(([, v]) => esc(v.name)).join(', ')]);
+  if (toConfirm.length) alerts.push(['warn', `${toConfirm.length} bénévole${toConfirm.length > 1 ? 's' : ''} affecté${toConfirm.length > 1 ? 's' : ''} à confirmer`, vLinks(toConfirm, true)]);
+  if (unassigned.length) alerts.push(['info', `${unassigned.length} bénévole${unassigned.length > 1 ? 's' : ''} sans mission`, vLinks(unassigned, false)]);
+  if (pendingVal.length) alerts.push(['info', `${pendingVal.length} inscription${pendingVal.length > 1 ? 's' : ''} en attente de validation`, vLinks(pendingVal, false)]);
   if (noFile.length) alerts.push(['info', `${noFile.length} mission${noFile.length > 1 ? 's' : ''} sans fiche`, mLinks(noFile)]);
   html += `<div class="vol-card"><div class="section-title" style="margin-top:0;">À traiter</div>${
     alerts.length ? alerts.map(([cls, title, detail]) => `<div class="dash-alert ${cls}"><div class="dash-alert-title">${title}</div><div class="dash-alert-detail">${detail}</div></div>`).join('')
@@ -6121,6 +6716,16 @@ function renderMissionDashboard() {
     }).join('')}</tbody></table></div></div>`;
   }
   el.innerHTML = html;
+}
+
+function openVolunteerInList(vid) {
+  const v = (state.volunteers || {})[vid];
+  if (!v) return;
+  switchVolTab('liste');
+  const st = document.getElementById('vol-filter-status'); if (st) st.value = 'all';
+  const mi = document.getElementById('vol-filter-mission'); if (mi) mi.value = 'all';
+  const se = document.getElementById('vol-search'); if (se) se.value = v.name || '';
+  renderVolunteerList();
 }
 
 // ── Fiche détaillée d'une mission ─────────────────
@@ -6220,10 +6825,15 @@ function fmtSize(n) { return n > 1048576 ? (n / 1048576).toFixed(1) + ' Mo' : Ma
 async function missionFileMeta(id, fid) {
   const f = state.missions[id].files[fid];
   if (!f.encMeta) return f;
-  if (f._plain) return f._plain;
+  const cached = missionFileMetaCache.get(fid);
+  if (cached && cached.sig === f.encMeta.ct) return cached.meta;
   const key = await getMissionKey(id);
   if (!key) return { name: 'Fiche chiffrée', type: '', size: f.size };
-  try { f._plain = { ...(await decJSON(key, f.encMeta)), size: f.size, uploadedAt: f.uploadedAt }; return f._plain; }
+  try {
+    const meta = { ...(await decJSON(key, f.encMeta)), size: f.size, uploadedAt: f.uploadedAt };
+    missionFileMetaCache.set(fid, { sig: f.encMeta.ct, meta });
+    return meta;
+  }
   catch (e) { return { name: 'Fiche illisible', type: '', size: f.size }; }
 }
 
@@ -6380,7 +6990,7 @@ async function renderMissionComments() {
       else body = { author: '?', text: '(commentaire chiffré)' };
     }
     const when = c.at ? new Date(c.at).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '';
-    const canDel = isMissionAdmin() || c.cid === me;
+    const canDel = isMissionAdmin() || (!secureDb && c.cid === me);
     rows.push(`<div class="mm-comment ${c.role === 'admin' ? 'from-admin' : ''}">
       <div class="mm-comment-head"><strong>${esc(body.author || 'Anonyme')}</strong>${c.role === 'admin' ? '<span class="mission-badge">Orga</span>' : ''}<span class="dash-msub">${when}</span>
         ${canDel ? `<button class="mm-comment-del" title="Supprimer" onclick="deleteMissionComment('${cid}')">✕</button>` : ''}</div>
@@ -6531,7 +7141,7 @@ function renderVolunteerList() {
         <option value="validated" ${v.status==='validated'?'selected':''}>Validé</option>
         <option value="assigned" ${v.status==='assigned'?'selected':''}>Affecté</option>
       </select>
-      <button class="vol-check-btn" title="Supprimer définitivement (RGPD)" onclick="deleteVolunteer('${id}')"></button>
+      ${admin ? `<button class="vol-check-btn" title="Supprimer définitivement (RGPD)" onclick="deleteVolunteer('${id}')">🗑</button>` : ''}
     </div>`;
   }).join('');
 }
@@ -6642,8 +7252,9 @@ const RGPD_RIGHTS_HTML = `
 `;
 
 function openRgpdModal(type) {
-  document.getElementById('rgpd-modal-title').textContent = type === 'rights' ? ' Vos droits sur vos données' : ' Politique de confidentialité';
-  document.getElementById('rgpd-modal-body').innerHTML = type === 'rights' ? RGPD_RIGHTS_HTML : RGPD_POLICY_HTML;
+  const titles = { rights: 'Vos droits sur vos données', legal: 'Mentions légales', policy: 'Politique de confidentialité' };
+  document.getElementById('rgpd-modal-title').textContent = titles[type] || titles.policy;
+  document.getElementById('rgpd-modal-body').innerHTML = type === 'rights' ? buildRightsHtml() : type === 'legal' ? buildLegalNoticeHtml() : buildPolicyHtml();
   document.getElementById('rgpd-modal-overlay').classList.add('open');
 }
 
@@ -6666,7 +7277,9 @@ function eraseRunnerData() {
     return;
   }
   if (!confirm(`Effacer définitivement le nom associé au dossard ${bib} ? Les temps de passage seront conservés de façon anonyme.`)) return;
-  delete state.runners[bib];
+  const r = state.runners[bib];
+  const kept = typeof r === 'object' && r ? { ageCategory: r.ageCategory || null, format: r.format || null } : {};
+  if (kept.ageCategory || kept.format) state.runners[bib] = kept; else delete state.runners[bib];
   saveState();
   bibInput.value = '';
   msgEl.style.color = 'var(--success)';

@@ -2015,7 +2015,7 @@ code { background: var(--surface2); }
       <div class="login-reset-title">Réinitialiser les codes d'accès</div>
       <div class="login-reset-body" id="login-reset-body"></div>
       <div id="login-reset-proof-block" style="display:none;">
-        <input class="login-input" id="login-reset-proof" placeholder="Identifiant du projet ou code de secours" onkeydown="if(event.key==='Enter') confirmCodeReset()">
+        <input class="login-input" id="login-reset-proof" autocapitalize="off" autocorrect="off" spellcheck="false" autocomplete="off" placeholder="Identifiant du projet ou code de secours" onkeydown="if(event.key==='Enter') confirmCodeReset()">
       </div>
       <div class="login-reset-actions">
         <button class="btn" onclick="closeCodeReset()">Annuler</button>
@@ -3495,9 +3495,9 @@ function confirmCodeReset() {
   const expected = fbProjectId();
   const err = document.getElementById('login-reset-error');
   if (expected) {
-    const given = (document.getElementById('login-reset-proof').value||'').trim();
-    const ok = given.toLowerCase() === expected.toLowerCase()
-            || given === MASTER_RESET_CODE;
+    const norm = v => (v || '').replace(/\s+/g, '').toLowerCase();
+    const given = norm(document.getElementById('login-reset-proof').value);
+    const ok = given === norm(expected) || given === norm(MASTER_RESET_CODE);
     if (!ok) {
       err.textContent = "Identifiant de projet ou code de secours incorrect.";
       return;
